@@ -33,3 +33,12 @@ The failing run should fail **for the right reason**: an assertion failure about
 ## When green comes too easy
 
 If the test passes the first time you run it — before you wrote the code — stop. Either the behavior already exists (then the task is redundant; verify and note it) or the test isn't actually exercising the new path (then it's a bad test; fix it until it fails for the right reason). A test that was never red is not yet a test.
+
+## Making green honestly — what you may not do to pass
+
+Green must come from correct code, never from a weakened test. The Post-Gate Review and the closing gate's test-count check exist to catch these, but don't rely on them — don't do them in the first place:
+
+- **Don't modify the test to fit broken code.** Once written from the `Verificação` criterion, the test is the spec; the implementation conforms to it, not the reverse.
+- **Don't weaken assertions** to make them pass more easily (loosening an exact match to a `toBeTruthy`, dropping a field check).
+- **Don't delete or `.skip`/`.only`/`xit` a failing test** to get a green run. That lowers the bar silently — exactly what the test-count check flags. A test legitimately removed needs its own task and commit.
+- **Don't write the minimum to game the test** rather than satisfy the behavior — minimum *correct* code, not minimum *passing* code.

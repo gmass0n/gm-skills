@@ -1,6 +1,6 @@
 ---
 name: implement
-description: Use to execute an approved implementation plan task by task — Phase 3 (EXECUTE) of the SDD workflow, after sdd:plan. Reads docs/specs/<feature>/plan.md and works through its tasks as a pure orchestrator — one fresh subagent per task, mandatory even for a single task, never coding or analyzing the codebase in its own context (analysis was Phase 2). Each subagent carries out the task's prescribed Steps in a strict test-first TDD loop (write the failing test, watch it fail, make it pass, refactor, repeat per criterion, commit atomically), reviewed before moving on; state.md is rewritten after every task so a dead session resumes exactly where it stopped. Serial by default; parallel only when the plan proves tasks are file-isolated. Ends with a closing gate that walks the coverage matrix and proves every requirement has a passing test. Trigger whenever the user wants to build/implement/execute a feature that has a plan, says "implement this", "build the plan", "run the tasks", "let's code X", or names a task/batch like "do T-3" or "run batch L-2" — and always against an existing plan. It will not declare done while any requirement lacks a green test.
+description: Use to execute an approved implementation plan task by task — Phase 3 (EXECUTE) of the SDD workflow, after sdd:plan. Reads docs/specs/<feature>/plan.md and works through its tasks as a pure orchestrator — one fresh subagent per task, mandatory even for a single task, never coding or analyzing the codebase in its own context (analysis was Phase 2). Each subagent carries out the task's prescribed Steps (tests following docs/codebase/conventions/testing.md) in a strict test-first TDD loop (write the failing test, watch it fail, make it pass, refactor, repeat per criterion, commit atomically), then a fresh review subagent runs a Post-Gate check (test count didn't regress, no undocumented SPEC_DEVIATION, not overcomplicated) before moving on; state.md is rewritten after every task so a dead session resumes exactly where it stopped. Serial by default; parallel only when the plan proves tasks are file-isolated. Ends with a closing-gate subagent that walks the coverage matrix and proves every requirement has a passing test, the test count didn't regress, and any SPEC_DEVIATION markers are surfaced. Trigger whenever the user wants to build/implement/execute a feature that has a plan, says "implement this", "build the plan", "run the tasks", "let's code X", or names a task/batch like "do T-3" or "run batch L-2" — and always against an existing plan. It will not declare done while any requirement lacks a green test.
 ---
 
 # SDD — Implement (Phase 3: Execute)
@@ -9,7 +9,7 @@ description: Use to execute an approved implementation plan task by task — Pha
 
 Turn `docs/specs/<feature>/plan.md` into working, tested code — and **prove** it. This is the end of the proof chain: the spec said WHAT, the plan said HOW and built the coverage matrix, and this phase makes every requirement real and green. The user's strongest requirement governs everything here: *nothing is skipped, nothing is untested, and the flow proves it* — mechanically, not on trust.
 
-You are the **orchestrator, and only the orchestrator**. You never write feature code, tests, or run analysis in your own context — you dispatch a fresh subagent per task, review its work, update `state.md`, and move on. Why: a subagent with a small, sharp brief is far less likely to drift or hallucinate than one big context accumulating every file it ever read. Isolation per task is the anti-hallucination mechanism.
+You are the **orchestrator, and only the orchestrator**. You never write feature code, tests, run analysis, or review diffs in your own context — you dispatch a fresh subagent to implement each task, a fresh subagent to review it, read their verdicts, update `state.md`, and move on. Why: a subagent with a small, sharp brief is far less likely to drift or hallucinate than one big context accumulating every file it ever read. Isolation per task is the anti-hallucination mechanism.
 
 **Spawning a subagent is mandatory for every task — no exceptions, even when the plan has a single task.** "It's just one small edit, I'll do it myself" is the exact rationalization that turns the orchestrator into an implementer and reintroduces drift. One task → one subagent. Always. If you ever find yourself reading feature source to decide *how* to implement, stop: that is the plan's job (Phase 2), already done, and doing it here means the plan was incomplete — fix the plan, don't analyze in implement.
 
@@ -50,7 +50,7 @@ When you do run a parallel batch, the mechanics matter (they're why most repos c
 
 ## The task loop — strict TDD, one subagent each
 
-For each task, dispatch one fresh subagent. Give it a **task briefing (~500 tokens)** — not the whole codebase map. The briefing is the task's own block from the plan verbatim: its `Steps` (with the embedded trechos), `Arquivos`, and `Verificação`. That block is already self-contained and execution-ready — the plan pre-digested it precisely so the executor needs no map and no analysis. The subagent's job is to *carry out the Steps in order*, not to figure out what to do. This keeps each subagent lean and on-target.
+For each task, dispatch one fresh subagent. Give it a **task briefing (~500 tokens)** — not the whole codebase map. The briefing is the task's own block from the plan verbatim: its `Steps` (with the embedded trechos), `Arquivos`, and `Verificação`, **plus `docs/codebase/conventions/testing.md`** so the tests it writes follow the project's enforced test contract (location, naming, the per-suite coverage checklist, commands, threshold). That set is self-contained and execution-ready — the plan pre-digested the *how*, testing.md fixes the *test shape*, so the executor needs no map and no analysis. The subagent's job is to *carry out the Steps in order*, not to figure out what to do. This keeps each subagent lean and on-target.
 
 Each subagent follows the plan's per-task `Steps`, which are already laid out as a strict **test-first TDD loop, no exceptions**:
 
@@ -67,9 +67,30 @@ COMMIT     → atomic commit for this task (the project's commit convention; in 
 
 The loop is the *proof that it works the best way*: the subagent never moves to the next criterion until the current one is green, and never commits until every criterion of the task is green. Each `RUN IT` is a real test execution — the subagent reports the actual pass/fail output, not "should pass". A criterion that can't be made to fail-then-pass is a flaw in the task or the spec — surface it, don't fake green.
 
+**Tests follow the project's testing convention.** The subagent's briefing includes `docs/codebase/conventions/testing.md` (file location, naming, the per-suite coverage checklist, the run commands, the coverage threshold). Tests are written *to that doc*, not to the subagent's own taste — it is the project's enforced test contract. If a task surfaces a real gap in that doc (a case it doesn't cover, a stale command), note it for `sdd:codebase diff` to fold back in — don't silently diverge.
+
 The non-negotiable: **no production code without a failing test first.** This is the fourth link in the proof chain — it guarantees every line of feature code exists to satisfy a test that maps to a requirement. The discipline that makes this stick (and the rationalizations that erode it) is in `references/tdd-discipline.md` — read it when a task tempts you to skip the red step or when a test is hard to write.
 
-**Review after each task (serial path).** Before moving to the next task, check the subagent's work: tests green, the task's `Verificação` actually satisfied, no scope creep beyond the task's `Arquivos`, follows the patterns in the codebase map. On a parallel batch, review per-batch instead (after the integrated-branch suite passes) — that's the one place granularity yields to throughput.
+### Post-Gate Review — a fresh subagent verifies, the orchestrator never analyzes
+
+After a task's commit, **dispatch a separate review subagent** (not the same one that wrote the code, and never the orchestrator in its own context — you only orchestrate, you don't read source to judge it). The reviewer gets the task's `Arquivos`, `Verificação`, the diff, and `testing.md`, and checks three things tlc-spec-driven proved cheap and high-value:
+
+1. **Test count didn't regress** — the suite has *at least* as many test cases as before the task. A drop means a test was silently deleted or skipped to force green. This is mechanical and catches the highest-impact cheat.
+2. **No undocumented spec deviation** — if the code diverged from what the plan's Steps prescribed, there must be a `// SPEC_DEVIATION:` marker explaining it (see below). Divergence without a marker → kick back to fix.
+3. **Not overcomplicated** — "would a senior engineer flag this as more complex than the task needs?" and "does it match the patterns in the codebase map?". If yes → the implementing subagent simplifies and re-runs the task's gate.
+
+Only when the reviewer returns clean does the task count as done and `state.md` advance. The review is a subagent precisely so the orchestrator stays lean and unbiased — a reviewer with fresh eyes catches what the author rationalized.
+
+**`// SPEC_DEVIATION:` marker.** When a task's implementation must diverge from the plan's Steps (a signature the plan didn't foresee, a different data structure for a real constraint), the implementing subagent leaves an inline marker at the divergence:
+
+```
+// SPEC_DEVIATION: usei Map em vez do array que o plano previa
+// Reason: lookup O(1) exigido pelo volume real do upstream
+```
+
+It's the implement-phase twin of the spec's `[NEEDS CLARIFICATION]` and the plan's `[ANALYSIS]` — a durable, greppable record that code and plan disagreed *and why*. The closing gate collects every `SPEC_DEVIATION` and surfaces them in the final report, so a divergence is a conscious, reviewed decision, never a silent drift.
+
+**Review after each task (serial path) — via the Post-Gate Review subagent above, not in your own context.** Before moving to the next task, the review subagent checks: tests green, the task's `Verificação` actually satisfied, test count didn't regress, no scope creep beyond the task's `Arquivos`, `SPEC_DEVIATION` markers present for any divergence, follows the patterns in the codebase map. You (orchestrator) read its verdict and decide go/fix — you don't read the diff yourself. On a parallel batch, review per-batch instead (after the integrated-branch suite passes) — that's the one place granularity yields to throughput.
 
 Task status **derives from git** — an atomic commit per task is the record of what's done. Don't maintain a parallel "done list"; the commit log is the truth.
 
@@ -92,7 +113,7 @@ It's a cursor, not a journal: where am I, what's next, which requirements are gr
 
 ## The closing gate — the proof
 
-This is the payoff of the whole workflow. When the tasks are done, **walk the plan's coverage matrix and prove completion** — don't declare done on vibes:
+This is the payoff of the whole workflow. When the tasks are done, **dispatch a closing-gate subagent to walk the plan's coverage matrix and prove completion** — the orchestrator commissions the proof and reads the verdict; it doesn't run the checks in its own context. Don't declare done on vibes:
 
 ```
 for each REQ in the plan's matrix:
@@ -102,13 +123,17 @@ for each REQ in the plan's matrix:
 
 then on the integrated branch:
     ├─ full suite passes
-    ├─ coverage of the new slice didn't regress
-    └─ lint/typecheck/hooks pass (the project's enforced invariants)
+    ├─ test count did NOT regress vs base — no test silently deleted or skipped to go green
+    ├─ coverage of the new slice didn't regress (threshold from testing.md)
+    ├─ lint/typecheck/hooks pass (the project's enforced invariants)
+    └─ collect every // SPEC_DEVIATION marker in the slice → list them in the report
 ```
 
 If any REQ lacks a committed task with a passing test, **do not declare done.** Report exactly which requirements are still open and what's missing. This is the difference from a static coverage check: here every requirement is proven by a *passing test on the real branch*, not just a row in a table.
 
-When the gate is fully green, update `state.md` (`próximo: —`, all REQs ✅) and report: which tasks landed, the matrix all-green, suite + coverage status. That report is the proof the user asked for.
+The **test-count check** is mechanical and cheap: it catches the one cheat a green suite hides — a test removed or `.skip`-ed so the bar is lower than it was. The gate compares the slice's test count against the base branch; a drop with no committed task that legitimately removed a test is a failure, not a pass. Coverage threshold and run commands come from `testing.md`, never invented.
+
+When the gate is fully green, update `state.md` (`próximo: —`, all REQs ✅) and report: which tasks landed, the matrix all-green, suite + coverage status, test-count delta, and any `SPEC_DEVIATION` markers (each a conscious, reviewed divergence). That report is the proof the user asked for.
 
 ## What this skill must not do
 
@@ -118,7 +143,10 @@ When the gate is fully green, update `state.md` (`próximo: —`, all REQs ✅) 
 - **No fat subagent context.** Briefing per task, not the whole map. Lean context is what keeps the executor from drifting.
 - **No scope creep.** A task touches only its `Arquivos`. New work discovered mid-task → note it, finish the task, raise it — don't silently expand.
 - **No implementing in your own context.** Every task, even the only task, goes to a fresh subagent. The orchestrator orchestrates; it never codes.
+- **No reviewing or gating in your own context.** Post-Gate Review and the closing gate run in fresh subagents too. You commission the check and read the verdict — you never read source to judge it yourself.
 - **No codebase analysis.** Analysis was Phase 2. If a task needs it, the plan is incomplete — fix the plan, don't analyze here.
+- **No silent test deletion.** Test count must not regress to go green. A dropped/skipped test without a task that legitimately removed it fails the gate.
+- **No undocumented divergence.** Code that departs from the plan's Steps carries a `// SPEC_DEVIATION:` marker with a reason. Drift without a marker is a review failure.
 - **No state.md as a journal.** Cursor only, lowercase filename, rewritten compact after every task; git holds the history.
 
 ## Common mistakes
@@ -131,7 +159,11 @@ When the gate is fully green, update `state.md` (`próximo: —`, all REQs ✅) 
 | Pasting the whole context.md into each subagent | ~500-token briefing from the plan's `Arquivos`/`Verificação`. The map was the plan's input, not the executor's. |
 | One giant commit at the end | Atomic commit per task — that's how status derives from git and how rollback stays cheap. |
 | "It's one tiny task, I'll just do it myself" | Spawn a subagent anyway. One task → one subagent, always. The orchestrator never codes. |
+| Reviewing the diff yourself to save a subagent | Post-Gate Review and the closing gate are subagents. You read verdicts, not source. Fresh eyes catch what the author rationalized. |
 | Reading source to decide how to implement | That's analysis — it belonged to Phase 2. The plan's Steps already say how. Missing? Fix the plan. |
+| Suite green, so it's fine | Check the test count didn't drop — a `.skip` or a deleted case turns red green. The gate asserts count vs base. |
+| Code diverged from the plan, no note | Leave a `// SPEC_DEVIATION:` marker with the reason. The closing gate collects them; silent drift is a review failure. |
+| Writing tests to your own taste | Tests follow `docs/codebase/conventions/testing.md` — location, naming, coverage checklist, commands, threshold. It's the project's test contract. |
 | Updating state.md only at the end | Rewrite it after every task's commit. It exists for the dead-session case; stale = useless. |
 | state.md growing every session | Rewrite it compact each time. It's a cursor (branch, last/next, coverage), not a log. |
 | Re-running dependencies when targeting a single task | Verify the dependency is committed; if not, stop and say so. Don't silently rebuild it. |
