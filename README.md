@@ -33,8 +33,16 @@ Artifacts live in `docs/specs/<feature>/{spec.md, plan.md, state.md}`; the codeb
 
 ```
 codex plugin marketplace add gmass0n/gm-skills
-codex plugin install sdd
 ```
+
+Then open the interactive plugin browser to install and enable it:
+
+```
+codex
+/plugins
+```
+
+In `/plugins`: switch to the **gm-skills** marketplace tab, open **sdd**, choose **install**, then press **Space** to enable it. Codex installs into `~/.codex/plugins/cache/gm-skills/sdd/<version>/` and stores the enabled state in `~/.codex/config.toml`. (Codex has no `codex plugin install` subcommand — installation is done through `/plugins`.)
 
 Both runtimes read the **same** `plugins/sdd/skills/` — a skill is authored once and works in either. Claude Code resolves the plugin via `.claude-plugin/`; Codex via `.codex-plugin/` (manifest) and `.agents/plugins/marketplace.json` (marketplace). In Codex the skills surface through progressive disclosure (name + description first, full `SKILL.md` loaded on use); invoke a phase by intent (e.g. "map the repo", "spec out X", "plan this", "implement the plan").
 
