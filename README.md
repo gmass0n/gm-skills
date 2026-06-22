@@ -24,5 +24,5 @@ Artifacts live in `docs/specs/<feature>/{spec.md, plan.md, STATE.md}`; the codeb
 
 ```
 /plugin marketplace add gmass0n/agent-skills
-/plugin install sdd@agent-skills
+/plugin install sdd@gm-skills
 ```
