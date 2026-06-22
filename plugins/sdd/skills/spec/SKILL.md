@@ -1,6 +1,6 @@
 ---
 name: spec
-description: Use to turn a feature idea into a complete, unambiguous specification — Phase 1 (SPECIFY) of the SDD workflow, before any planning or code. Run a relentless one-question-at-a-time interview (grounded in docs/codebase/context.md), then write docs/specs/<feature>/spec.md with user stories, EARS requirements carrying stable REQ-IDs, acceptance criteria, out-of-scope, the interview's decisions, and any open clarifications. Trigger whenever the user wants to spec a feature, write requirements, capture what to build, or says "spec out X", "let's define this feature", "what should this do" — and always before sdd:plan. The interview will not finish while any ambiguity is unresolved, so the resulting spec is safe to plan against.
+description: "Use to turn a feature idea into a complete, unambiguous specification — Phase 1 (SPECIFY) of the SDD workflow, before any planning or code. Run a relentless one-question-at-a-time interview (grounded in docs/codebase/context.md), then write docs/specs/<feature>/spec.md with user stories, EARS requirements carrying stable REQ-IDs, acceptance criteria, out-of-scope, the interview's decisions, and any open clarifications. Trigger whenever the user wants to spec a feature, write requirements, capture what to build, or says \"spec out X\", \"let's define this feature\", \"what should this do\" — and always before sdd:plan. The interview will not finish while any ambiguity is unresolved, so the resulting spec is safe to plan against."
 ---
 
 # SDD — Specify (Phase 1)

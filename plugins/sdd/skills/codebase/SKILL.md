@@ -1,6 +1,6 @@
 ---
 name: codebase
-description: Build or refresh the canonical codebase map under docs/codebase/ — Phase 0 of the SDD workflow, read by sdd:spec and sdd:plan to stay on-pattern. Use when you "map the repo", document architecture/layers/patterns/conventions/integrations before a feature, audit tech debt/risk, refresh the map after changes, or ask "what are the conventions here". Generates a navigable tree (context.md router + overview.md + architecture/, layers/, patterns/, integrations/, conventions/, concerns/), one PT-BR doc per concept citing real paths and the enforcement behind each rule, and keeps the root CLAUDE.md/AGENTS.md routers in sync with the map. Run before sdd:spec/sdd:plan so features inherit real project patterns instead of guesses.
+description: "Build or refresh the canonical codebase map under docs/codebase/ — Phase 0 of the SDD workflow, read by sdd:spec and sdd:plan to stay on-pattern. Use when you \"map the repo\", document architecture/layers/patterns/conventions/integrations before a feature, audit tech debt/risk, refresh the map after changes, or ask \"what are the conventions here\". Generates a navigable tree (context.md router + overview.md + architecture/, layers/, patterns/, integrations/, conventions/, concerns/), one PT-BR doc per concept citing real paths and the enforcement behind each rule, and keeps the root CLAUDE.md/AGENTS.md routers in sync with the map. Run before sdd:spec/sdd:plan so features inherit real project patterns instead of guesses."
 ---
 
 # SDD — Codebase Map (Phase 0)
