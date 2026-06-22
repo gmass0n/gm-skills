@@ -1,6 +1,6 @@
 {
   "name": "sdd",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Spec-Driven Development workflow: codebase mapping, spec, plan and implement skills that prove every requirement is built and tested. Brownfield-first.",
   "author": "Gabriel Masson",
   "repository": "https://github.com/gmass0n/gm-skills",
