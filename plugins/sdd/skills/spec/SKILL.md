@@ -1,0 +1,128 @@
+---
+name: spec
+description: Use to turn a feature idea into a complete, unambiguous specification — Phase 1 (SPECIFY) of the SDD workflow, before any planning or code. Run a relentless one-question-at-a-time interview (grounded in docs/codebase/context.md), then write docs/specs/<feature>/spec.md with user stories, EARS requirements carrying stable REQ-IDs, acceptance criteria, out-of-scope, the interview's decisions, and any open clarifications. Trigger whenever the user wants to spec a feature, write requirements, capture what to build, or says "spec out X", "let's define this feature", "what should this do" — and always before sdd:plan. The interview will not finish while any ambiguity is unresolved, so the resulting spec is safe to plan against.
+---
+
+# SDD — Specify (Phase 1)
+
+## What this phase produces
+
+One file: `docs/specs/<feature>/spec.md`. It is the **contract of WHAT to build and WHY** — observable behavior, not implementation. A good spec survives a complete rewrite of the code: if a requirement can only be written by knowing which class exists, it is design (Phase 2), not spec.
+
+The spec is the root of the SDD proof chain. Every requirement gets a stable **REQ-ID**, and later phases prove that each REQ-ID maps to a task, a test, and a passing run. So the single most important property here is: **no requirement is vague, missing, or silently assumed.** That is what the clarification loop below guarantees mechanically.
+
+This phase reads the codebase map but never writes to it. It only writes under `docs/specs/<feature>/`.
+
+## Before the interview — ground yourself
+
+Read `docs/codebase/context.md` first. It gives you the stack, the enforced invariants, and per-task loading pointers — so your questions are about *this* project, not a generic one, and so you never propose behavior the project's patterns forbid.
+
+- If `docs/codebase/context.md` does not exist → tell the user the map is missing and recommend running `sdd:codebase` first. You can still proceed, but say the spec is ungrounded.
+- If it exists but a doc relevant to this feature looks stale (its `sources` paths changed since its `generated:` date) → recommend `sdd:codebase diff` before specifying, so you're not building on a false premise.
+
+**Lock the language now.** Detect the language of the user's initiating prompt. If it's Portuguese, the entire interview, every question, and the whole `spec.md` are in Portuguese. If English, everything is in English. This is essential — never mix languages or switch on the user who started the conversation. Record the choice in the spec's frontmatter (`lang: pt` or `lang: en`); `sdd:plan` reads it and never re-detects.
+
+## The interview — relentless, one question at a time
+
+Interview the user relentlessly about every aspect of the feature until you reach a shared, unambiguous understanding. Walk down each branch of the design tree, resolving dependencies between decisions one by one.
+
+**Core rules of the interview:**
+- **One question at a time.** Asking several at once is bewildering and produces shallow answers. Wait for the answer before the next question.
+- **Always carry your recommendation.** For every question, you already did the thinking — present the option you'd choose first, marked as recommended, with the reasoning. The user is reacting to a proposal, not generating an answer from scratch.
+- **Explore the code instead of asking, whenever you can.** If a question is answerable by reading the repo (how does the existing auth guard work? what shape does the SERU client return?), go read it. Only ask the user what the code cannot tell you — product intent, priorities, trade-offs, things not yet decided.
+- **Ask via the native question UI.** Use the `AskUserQuestion` tool so the user gets selectable options, can add notes, and can step away — the same feel as a brainstorming session. Free-text prose questions invite you to fill the silence with an assumption; structured options make the user's choice explicit. Put the recommended option first and label it "(recomendado)".
+
+The interview ends only when the spec has **zero** open clarifications (see the loop below) and the user confirms the picture is complete.
+
+## The clarification loop — the heart of this phase
+
+The danger with "always give a recommendation" is that an unanswered recommendation becomes a **silent decision**. The clarification loop is the guard against that: where the spec is underspecified, you **mark it, you do not guess.**
+
+```
+loop:
+  ├─ ask the next question (with recommendation, via AskUserQuestion)
+  ├─ new ambiguity surfaced and NOT resolved this turn?
+  │     → write a [NEEDS CLARIFICATION: <pergunta específica>] marker into spec.md NOW
+  ├─ ambiguity resolved?
+  │     → update spec.md, remove its marker, record the decision in "Decisões e restrições"
+  └─ exit condition: spec.md has ZERO [NEEDS CLARIFICATION] markers AND user confirms complete
+        ↑ only here may the interview finish
+```
+
+**Persist incrementally — this is non-negotiable.** The moment you detect an ambiguity, write its `[NEEDS CLARIFICATION]` marker into `spec.md` on disk. Do not hold markers in your head to write at the end. Why: if the session dies mid-interview (crash, `/clear`, the user steps away), the spec on disk reflects the true state — which questions are still open. When the user comes back and re-invokes `sdd:spec`, you read the pending markers and **resume the loop only on what's open**, without reopening settled decisions or losing them.
+
+So `spec.md` is the source of truth for clarification progress, not the conversation. This gives you resumability for free, and it's why the spec is always safe to leave half-finished.
+
+**Marker convention.** Use `[NEEDS CLARIFICATION: question]`. The repo already uses `[UNVERIFIED]` for unconfirmed SERU DTO fields — reuse that exact tag when the open question is "is this upstream contract real?", so the markers read consistently with code the team already writes.
+
+## Writing spec.md
+
+Follow `templates/spec.template.md`. The required shape:
+
+```markdown
+---
+title: <feature>
+lang: pt | en          # locked from the initiating prompt; sdd:plan inherits this
+status: draft | ready  # "ready" only when zero [NEEDS CLARIFICATION] remain
+generated: <data>
+---
+
+# Spec: <feature>
+
+## Contexto e objetivo
+<por que isto existe, que problema do usuário resolve. 2-3 frases. Sem código.>
+
+## User stories
+- US-1: Como <persona>, quero <capacidade> para <benefício>.
+
+## Requisitos (EARS, com REQ-IDs)
+<cada requisito é testável e observável. EARS: WHEN/WHILE/IF ... THE sistema SHALL ...>
+- REQ-1: WHEN <evento>, THE sistema SHALL <comportamento observável>.
+- REQ-2: WHILE <estado>, THE sistema SHALL <comportamento>.
+
+## Critérios de aceite (por requisito)
+- REQ-1: dado <contexto>, quando <ação>, então <resultado verificável>.
+
+## Fora de escopo
+- <o que explicitamente NÃO entra — fecha a porta para scope creep>
+
+## Decisões e restrições da entrevista
+<decision log: o COMO-condicionante decidido no grill que o plan precisa herdar
+ mas que não é um requisito. Cada linha: a decisão + por quê + REQ afetado.>
+- D-1: <decisão> — porque <razão>. Afeta REQ-x.
+
+## Clarificações pendentes
+<os [NEEDS CLARIFICATION] ainda abertos. Quando vazio, status vira "ready".>
+```
+
+**Why both "Decisões" and "Clarificações" exist:** they are opposite halves of the handoff. "Clarificações pendentes" is what's still *open* (the plan must not start until it's empty). "Decisões e restrições" is what was *closed during the interview* — choices like "SSE passthrough, not polling" or "Finished maps to 'closed'" that are technical-conditioning but not requirements. Without the decision log, those choices evaporate and `sdd:plan` re-derives or contradicts them. The spec stays "WHAT", but it carries forward the constraints the conversation settled.
+
+## Requirement quality — a cheap check inside the loop
+
+A requirement that passes the coverage matrix but is untestable is a false green. As you write each REQ, sanity-check it: does it have a measurable, observable criterion? "baixa latência" is not testable; "p95 < 200ms" is. If a REQ has no measurable threshold, that's an ambiguity — mark it `[NEEDS CLARIFICATION: qual o número?]` rather than letting it through. This is the "unit test for English" applied per requirement, folded into the loop you already run — not a separate step.
+
+## Finishing — the handoff
+
+When the loop exits (zero clarifications, user confirms):
+1. Set `status: ready` in the frontmatter.
+2. Confirm `spec.md` has REQ-IDs, acceptance criteria, the decision log, and an empty "Clarificações pendentes".
+3. Hand off explicitly: tell the user the spec is ready at `docs/specs/<feature>/spec.md` and the next step is `sdd:plan <feature>`. There is no orchestrator that chains automatically — the handoff line is how the user knows where they are.
+
+## What this skill must not do
+
+- **No code, no design.** No class names, no file layout, no "we'll use an Observable". That is `sdd:plan`. If you catch yourself writing HOW, move it to the decision log as a constraint or drop it.
+- **No writing outside `docs/specs/<feature>/`.** The codebase map is read-only input.
+- **No finishing with open ambiguity.** The loop exists precisely so the spec can never be "done but vague".
+- **No language drift.** Whatever the initiating prompt was, stay in it.
+
+## Common mistakes
+
+| Mistake | Fix |
+|---|---|
+| Asking five questions in one message | One at a time, each with your recommendation, via AskUserQuestion. The user reacts; they don't author. |
+| Letting an unanswered recommendation become the decision | Unresolved → `[NEEDS CLARIFICATION]` marker, persisted now. Silence is not consent. |
+| Writing requirements that mention classes/files | That's design. Spec is observable behavior that survives a rewrite. |
+| Holding clarifications to write at the end | Persist each marker the moment it surfaces — the spec on disk must always be resumable. |
+| Vague requirement with no measurable criterion | Mark it for clarification. "Fast" needs a number to be testable. |
+| Mixing PT and EN, or switching language mid-spec | Lock from the initiating prompt; record `lang:` in frontmatter; never switch. |
+| Asking what the code already answers | Read the repo. Reserve questions for product intent and trade-offs. |

@@ -1,0 +1,17 @@
+{
+  "name": "agent-skills",
+  "owner": {
+    "name": "Gabriel Masson"
+  },
+  "metadata": {
+    "description": "Personal Claude Code plugins and skills.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "sdd",
+      "source": "./plugins/sdd",
+      "description": "Spec-Driven Development workflow: codebase mapping, spec, plan and implement skills that prove every requirement is built and tested. Brownfield-first."
+    }
+  ]
+}
