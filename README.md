@@ -1,6 +1,6 @@
 # gm-skills
 
-Personal [Claude Code](https://claude.com/claude-code) plugin marketplace.
+Personal plugin marketplace for [Claude Code](https://claude.com/claude-code) **and** [OpenAI Codex](https://developers.openai.com/codex). The same skills run on both runtimes — one `skills/` directory, two manifests (`.claude-plugin/` and `.codex-plugin/`), no duplication.
 
 ## Plugins
 
@@ -18,11 +18,35 @@ next can start, and the whole chain proves every requirement was built and teste
 
 **The proof chain:** clarify (no open ambiguity) → coverage matrix (every REQ has a task+test) → analyze (no task contradicts an enforced invariant) → TDD (no code without a failing test first) → closing gate (every REQ green on the integrated branch).
 
-Artifacts live in `docs/specs/<feature>/{spec.md, plan.md, STATE.md}`; the codebase map in `docs/codebase/`.
+Artifacts live in `docs/specs/<feature>/{spec.md, plan.md, state.md}`; the codebase map in `docs/codebase/`.
 
 ## Install
+
+### Claude Code
 
 ```
 /plugin marketplace add gmass0n/gm-skills
 /plugin install sdd@gm-skills
 ```
+
+### OpenAI Codex
+
+```
+codex plugin marketplace add gmass0n/gm-skills
+codex plugin install sdd
+```
+
+Both runtimes read the **same** `plugins/sdd/skills/` — a skill is authored once and works in either. Claude Code resolves the plugin via `.claude-plugin/`; Codex via `.codex-plugin/` (manifest) and `.agents/plugins/marketplace.json` (marketplace). In Codex the skills surface through progressive disclosure (name + description first, full `SKILL.md` loaded on use); invoke a phase by intent (e.g. "map the repo", "spec out X", "plan this", "implement the plan").
+
+## Layout
+
+```
+gm-skills/
+├── .claude-plugin/marketplace.json   # Claude Code marketplace
+├── .agents/plugins/marketplace.json  # Codex marketplace
+└── plugins/sdd/
+    ├── .claude-plugin/plugin.json    # Claude Code manifest
+    ├── .codex-plugin/plugin.json     # Codex manifest
+    └── skills/                       # shared — codebase / spec / plan / implement
+```
+

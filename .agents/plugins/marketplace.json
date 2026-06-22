@@ -1,0 +1,19 @@
+{
+  "name": "gm-skills",
+  "interface": {
+    "displayName": "gm-skills"
+  },
+  "plugins": [
+    {
+      "name": "sdd",
+      "source": {
+        "source": "local",
+        "path": "./plugins/sdd"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
