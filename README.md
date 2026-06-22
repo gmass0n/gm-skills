@@ -1,4 +1,4 @@
-# agent-skills
+# gm-skills
 
 Personal [Claude Code](https://claude.com/claude-code) plugin marketplace.
 
@@ -23,6 +23,6 @@ Artifacts live in `docs/specs/<feature>/{spec.md, plan.md, STATE.md}`; the codeb
 ## Install
 
 ```
-/plugin marketplace add gmass0n/agent-skills
+/plugin marketplace add gmass0n/gm-skills
 /plugin install sdd@gm-skills
 ```
