@@ -1,6 +1,6 @@
 ---
 name: implement
-description: Use to execute an approved implementation plan task by task — Phase 3 (EXECUTE) of the SDD workflow, after sdd:plan. Reads docs/specs/<feature>/plan.md and works through its tasks, one fresh subagent per task, each doing strict test-first TDD (write the failing test, watch it fail, make it pass, refactor, commit atomically), reviewed before moving on. Serial by default; parallel only when the plan proves tasks are file-isolated. Ends with a closing gate that walks the coverage matrix and proves every requirement has a passing test. Trigger whenever the user wants to build/implement/execute a feature that has a plan, says "implement this", "build the plan", "run the tasks", "let's code X", or names a task/batch like "do T-3" or "run batch L-2" — and always against an existing plan. It will not declare done while any requirement lacks a green test.
+description: Use to execute an approved implementation plan task by task — Phase 3 (EXECUTE) of the SDD workflow, after sdd:plan. Reads docs/specs/<feature>/plan.md and works through its tasks as a pure orchestrator — one fresh subagent per task, mandatory even for a single task, never coding or analyzing the codebase in its own context (analysis was Phase 2). Each subagent carries out the task's prescribed Steps in a strict test-first TDD loop (write the failing test, watch it fail, make it pass, refactor, repeat per criterion, commit atomically), reviewed before moving on; state.md is rewritten after every task so a dead session resumes exactly where it stopped. Serial by default; parallel only when the plan proves tasks are file-isolated. Ends with a closing gate that walks the coverage matrix and proves every requirement has a passing test. Trigger whenever the user wants to build/implement/execute a feature that has a plan, says "implement this", "build the plan", "run the tasks", "let's code X", or names a task/batch like "do T-3" or "run batch L-2" — and always against an existing plan. It will not declare done while any requirement lacks a green test.
 ---
 
 # SDD — Implement (Phase 3: Execute)
@@ -9,9 +9,13 @@ description: Use to execute an approved implementation plan task by task — Pha
 
 Turn `docs/specs/<feature>/plan.md` into working, tested code — and **prove** it. This is the end of the proof chain: the spec said WHAT, the plan said HOW and built the coverage matrix, and this phase makes every requirement real and green. The user's strongest requirement governs everything here: *nothing is skipped, nothing is untested, and the flow proves it* — mechanically, not on trust.
 
-You are the **orchestrator**. You don't write feature code in your own context; you dispatch a fresh subagent per task, review its work, and move on. Why: a subagent with a small, sharp brief is far less likely to drift or hallucinate than one big context accumulating every file it ever read. Isolation per task is the anti-hallucination mechanism.
+You are the **orchestrator, and only the orchestrator**. You never write feature code, tests, or run analysis in your own context — you dispatch a fresh subagent per task, review its work, update `state.md`, and move on. Why: a subagent with a small, sharp brief is far less likely to drift or hallucinate than one big context accumulating every file it ever read. Isolation per task is the anti-hallucination mechanism.
 
-This phase reads `plan.md` and the codebase map; it writes code, tests, commits, and the feature's `STATE.md`.
+**Spawning a subagent is mandatory for every task — no exceptions, even when the plan has a single task.** "It's just one small edit, I'll do it myself" is the exact rationalization that turns the orchestrator into an implementer and reintroduces drift. One task → one subagent. Always. If you ever find yourself reading feature source to decide *how* to implement, stop: that is the plan's job (Phase 2), already done, and doing it here means the plan was incomplete — fix the plan, don't analyze in implement.
+
+**No codebase analysis in this phase.** The plan already did it — it carries the `Arquivos`, the `Steps`, the trechos, the `Verificação`. This phase only *executes* what the plan prescribes. If a task can't be executed without analysis, the plan is the bug; route it back to `sdd:plan`, don't paper over it here.
+
+This phase reads `plan.md` and the codebase map; it writes code, tests, commits, and the feature's `state.md`.
 
 ## Preconditions — refuse rather than guess
 
@@ -46,17 +50,22 @@ When you do run a parallel batch, the mechanics matter (they're why most repos c
 
 ## The task loop — strict TDD, one subagent each
 
-For each task, dispatch one fresh subagent. Give it a **task briefing (~500 tokens)** — not the whole codebase map. The briefing is assembled from the plan's `Arquivos` + `Verificação` fields plus the specific `caminho:linha` pointers it needs. Navigating the map was the plan's job; the executor gets a sharp, pre-digested brief. This keeps each subagent lean and on-target.
+For each task, dispatch one fresh subagent. Give it a **task briefing (~500 tokens)** — not the whole codebase map. The briefing is the task's own block from the plan verbatim: its `Steps` (with the embedded trechos), `Arquivos`, and `Verificação`. That block is already self-contained and execution-ready — the plan pre-digested it precisely so the executor needs no map and no analysis. The subagent's job is to *carry out the Steps in order*, not to figure out what to do. This keeps each subagent lean and on-target.
 
-Each subagent does **test-first TDD, no exceptions**:
+Each subagent follows the plan's per-task `Steps`, which are already laid out as a strict **test-first TDD loop, no exceptions**:
 
 ```
-RED    → write the test from the task's Verificação criterion. RUN IT. Watch it fail.
-         (If it passes before any code, the test is wrong — it's not testing the thing.)
-GREEN  → write the minimal code to make it pass. RUN IT. Watch it pass.
-REFACTOR → clean up with the test as a safety net. Tests stay green.
-COMMIT → atomic commit for this task (the project's commit convention; in English).
+loop over the task's Verificação criteria:
+  RED      → write the test from the criterion. RUN IT. Watch it fail for the RIGHT reason
+             (an assertion about the missing behavior — not a syntax/import error).
+             If it passes before any code, the test is wrong — fix it until it fails.
+  GREEN    → write the minimal code to make it pass. RUN IT. Watch it pass.
+  REFACTOR → clean up with the test as a safety net. RUN the test again — still green.
+repeat until every Verificação criterion of the task has a green test;
+COMMIT     → atomic commit for this task (the project's commit convention; in English).
 ```
+
+The loop is the *proof that it works the best way*: the subagent never moves to the next criterion until the current one is green, and never commits until every criterion of the task is green. Each `RUN IT` is a real test execution — the subagent reports the actual pass/fail output, not "should pass". A criterion that can't be made to fail-then-pass is a flaw in the task or the spec — surface it, don't fake green.
 
 The non-negotiable: **no production code without a failing test first.** This is the fourth link in the proof chain — it guarantees every line of feature code exists to satisfy a test that maps to a requirement. The discipline that makes this stick (and the rationalizations that erode it) is in `references/tdd-discipline.md` — read it when a task tempts you to skip the red step or when a test is hard to write.
 
@@ -64,12 +73,12 @@ The non-negotiable: **no production code without a failing test first.** This is
 
 Task status **derives from git** — an atomic commit per task is the record of what's done. Don't maintain a parallel "done list"; the commit log is the truth.
 
-## STATE.md — the cursor, kept tiny
+## state.md — the cursor, updated after every task
 
-Maintain `docs/specs/<feature>/STATE.md` so work survives across sessions. **Only `sdd:implement` writes it.** Keep it bounded and **rewrite it compact each update — never append** — so it stays ~300-400 tokens and costs almost nothing to load:
+Maintain `docs/specs/<feature>/state.md` (lowercase) so work survives across sessions. **Only `sdd:implement` writes it.** Keep it bounded and **rewrite it compact each update — never append** — so it stays ~300-400 tokens and costs almost nothing to load:
 
 ```markdown
-# STATE — <feature>
+# state — <feature>
 branch: feature/CL-28-notifications
 último: T-3 (commit a1b2c3d)
 próximo: T-4
@@ -77,7 +86,9 @@ abertas: —                          # decisões/bloqueios pendentes
 cobertura: REQ-1 ✅  REQ-2 ✅  REQ-3 ⏳
 ```
 
-It's a cursor, not a journal: where am I, what's next, which requirements are green. The `cobertura:` line mirrors the plan's matrix and feeds the closing gate. Detailed history lives in git, not here. On a parallel batch, only you (the orchestrator) touch STATE.md — subagents never write it, or they'd race.
+**Rewrite it the instant a task finishes — after the task's commit, before dispatching the next subagent.** This is non-negotiable: `state.md` must always reflect the *real* committed state, so if the session dies mid-plan, the next run reads `último`/`próximo` and resumes from the exact task that was in flight — no re-doing committed work, no skipping an unstarted one. A `state.md` updated only at the end is useless for the one case it exists for.
+
+It's a cursor, not a journal: where am I, what's next, which requirements are green. The `cobertura:` line mirrors the plan's matrix and feeds the closing gate. Detailed history lives in git, not here. On a parallel batch, only you (the orchestrator) touch `state.md` — subagents never write it, or they'd race.
 
 ## The closing gate — the proof
 
@@ -97,7 +108,7 @@ then on the integrated branch:
 
 If any REQ lacks a committed task with a passing test, **do not declare done.** Report exactly which requirements are still open and what's missing. This is the difference from a static coverage check: here every requirement is proven by a *passing test on the real branch*, not just a row in a table.
 
-When the gate is fully green, update STATE.md (`próximo: —`, all REQs ✅) and report: which tasks landed, the matrix all-green, suite + coverage status. That report is the proof the user asked for.
+When the gate is fully green, update `state.md` (`próximo: —`, all REQs ✅) and report: which tasks landed, the matrix all-green, suite + coverage status. That report is the proof the user asked for.
 
 ## What this skill must not do
 
@@ -106,7 +117,9 @@ When the gate is fully green, update STATE.md (`próximo: —`, all REQs ✅) an
 - **No parallel without the plan's proof.** Unsure → serial. A corrupted merge costs more than the time saved.
 - **No fat subagent context.** Briefing per task, not the whole map. Lean context is what keeps the executor from drifting.
 - **No scope creep.** A task touches only its `Arquivos`. New work discovered mid-task → note it, finish the task, raise it — don't silently expand.
-- **No STATE.md as a journal.** Cursor only, rewritten compact; git holds the history.
+- **No implementing in your own context.** Every task, even the only task, goes to a fresh subagent. The orchestrator orchestrates; it never codes.
+- **No codebase analysis.** Analysis was Phase 2. If a task needs it, the plan is incomplete — fix the plan, don't analyze here.
+- **No state.md as a journal.** Cursor only, lowercase filename, rewritten compact after every task; git holds the history.
 
 ## Common mistakes
 
@@ -117,5 +130,8 @@ When the gate is fully green, update STATE.md (`próximo: —`, all REQs ✅) an
 | Running tasks in parallel to be fast | Only if the plan marked them `[P]` in a batch (proven file-isolated). Otherwise serial — a bad merge costs more. |
 | Pasting the whole context.md into each subagent | ~500-token briefing from the plan's `Arquivos`/`Verificação`. The map was the plan's input, not the executor's. |
 | One giant commit at the end | Atomic commit per task — that's how status derives from git and how rollback stays cheap. |
-| STATE.md growing every session | Rewrite it compact each time. It's a cursor (branch, last/next, coverage), not a log. |
+| "It's one tiny task, I'll just do it myself" | Spawn a subagent anyway. One task → one subagent, always. The orchestrator never codes. |
+| Reading source to decide how to implement | That's analysis — it belonged to Phase 2. The plan's Steps already say how. Missing? Fix the plan. |
+| Updating state.md only at the end | Rewrite it after every task's commit. It exists for the dead-session case; stale = useless. |
+| state.md growing every session | Rewrite it compact each time. It's a cursor (branch, last/next, coverage), not a log. |
 | Re-running dependencies when targeting a single task | Verify the dependency is committed; if not, stop and say so. Don't silently rebuild it. |

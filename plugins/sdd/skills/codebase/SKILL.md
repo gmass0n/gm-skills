@@ -1,6 +1,6 @@
 ---
 name: codebase
-description: Use to build or refresh the canonical codebase map under docs/codebase/ — the brownfield analysis layer (Phase 0) of the SDD workflow that sdd:spec and sdd:plan read to stay on-pattern. Trigger whenever you onboard to a repo, document architecture/layers/patterns/conventions/integrations before a feature, audit tech debt/risk, or refresh the map after a branch of changes. Generates a navigable tree (an agent-facing context.md router + overview.md + architecture/, layers/, patterns/, integrations/, conventions/, concerns/), one focused PT-BR doc per concept, each citing real file paths and tagged with the enforcement that backs it. Use this even when the user just says "map the repo", "what are the conventions here", "update the docs", or "is this map still current" — and always before sdd:spec/sdd:plan so features inherit real project patterns instead of guesses.
+description: Use to build or refresh the canonical codebase map under docs/codebase/ — the brownfield analysis layer (Phase 0) of the SDD workflow that sdd:spec and sdd:plan read to stay on-pattern. Trigger whenever you onboard to a repo, document architecture/layers/patterns/conventions/integrations before a feature, audit tech debt/risk, or refresh the map after a branch of changes. Generates a navigable tree (an agent-facing context.md router + overview.md + architecture/, layers/, patterns/, integrations/, conventions/, concerns/), one focused PT-BR doc per concept, each citing real file paths and tagged with the enforcement that backs it. Also keeps the repo's root CLAUDE.md and AGENTS.md routers in sync with the map — auto-fixing stale links (e.g. pointing at the abolished docs/codebase/README.md), ensuring both carry the token-frugal one-doc loading rule and reference sdd:codebase, and creating either if missing. Use this even when the user just says "map the repo", "what are the conventions here", "update the docs", or "is this map still current" — and always before sdd:spec/sdd:plan so features inherit real project patterns instead of guesses.
 ---
 
 # SDD — Codebase Map (Phase 0)
@@ -37,7 +37,7 @@ docs/codebase/
 
 **`context.md` replaces the old `docs/codebase/README.md` router** — it does the same routing job but is shaped for an agent (it also carries the enforced invariants and per-task loading pointers; see "context.md" below). There is no `docs/codebase/README.md`.
 
-**Never touch the repository's root `README.md`.** That file is operational (setup, scripts, run, troubleshooting) and is owned by humans. `context.md` may *summarize* the stack and *link* to the root README, but this skill only ever writes under `docs/codebase/`.
+**Never touch the repository's root `README.md`.** That file is operational (setup, scripts, run, troubleshooting) and is owned by humans. `context.md` may *summarize* the stack and *link* to the root README, but this skill only ever writes under `docs/codebase/` — **with one narrow, deliberate exception: the root `CLAUDE.md` and `AGENTS.md` routers**, which this skill keeps in sync with the map (see "CLAUDE.md / AGENTS.md — the root routers must point here"). Those two are routing files, part of the same system as `context.md`; the operational `README.md` is not, and stays untouched.
 
 ### context.md — the agent-facing router (the most important output)
 
@@ -52,6 +52,24 @@ This is the file `sdd:spec`/`sdd:plan` load on every run, and the one an impleme
 `context.md` does **not** hold the end-to-end trace — that is narrative reading and lives in `overview.md` (which is marked "onboarding, não carregar em tarefa rotineira").
 
 `concerns/` is the one **evaluative** directory — it documents what is *wrong or fragile*, not how the code works. It is governed by a stricter evidence bar (every concern needs a `caminho:linha` anchor, a confirmed `TODO`/`FIXME`, a proven test gap…) and its docs do **not** open with `Regra-de-ouro`. An honestly short `concerns/` beats an inflated one — when in doubt, omit. See `templates/docs/concern.template.md`.
+
+### CLAUDE.md / AGENTS.md — the root routers must point here
+
+`docs/codebase/context.md` is only useful if the agents that start at the repo root are *sent* to it. The repo's root `CLAUDE.md` (Claude Code) and `AGENTS.md` (other agents) are those entry points — thin reading routers that say "for architecture/conventions, go to `docs/codebase/`, open the one doc you need, don't read the tree." If they drift (point at a doc that no longer exists, miss the token-frugal loading rule, or fail to mention `sdd:codebase` as the way to keep the map current), the whole map gets bypassed. So this skill **owns keeping them in sync** with the map it produces.
+
+**This is a deliberate, narrow exception to "write only under `docs/codebase/`."** CLAUDE.md and AGENTS.md are *part of the same routing system* as `context.md` — not the operational root `README.md`, which stays human-owned and untouched. The exception covers exactly these two router files, nothing else at the root.
+
+What "in sync" means — verify and **auto-fix** each:
+1. **Points at `docs/codebase/context.md`**, not the abolished `docs/codebase/README.md`. This skill replaced that README with `context.md`; any router still naming `README.md` is stale by definition — rewrite the link.
+2. **Carries the token-frugal loading rule**: "open the *one* doc your task needs; do not read the whole `docs/codebase/` tree by default." This is the same selective-loading discipline `context.md`'s "Carregamento por tarefa" encodes — the routers must echo it or agents over-read.
+3. **Names `sdd:codebase` (full + diff) as the way the map is kept current**, with diff mode as the after-a-change default.
+4. **CLAUDE.md and AGENTS.md mirror each other.** AGENTS.md is the non-Claude twin; they carry the same routing table. When you fix one, fix the other — and AGENTS.md states it mirrors CLAUDE.md.
+
+**Full mode guarantees both exist.** If a router is missing, create it as a minimal map-pointing router (the routing table + the three rules above). If both are missing, create both. Never fabricate architecture prose in them — they *route* to `docs/codebase/`, they don't duplicate it. Keep them lean; the canonical content lives in the map.
+
+**Diff mode** re-checks the routers only when the doc set changed (a routing-table entry may be stale) or when `context.md` itself was regenerated — then reconcile and report. Otherwise leave them byte-identical.
+
+Always **report the router edits** in the final summary (what drifted, what you fixed), the same as any other written file.
 
 ## Document language and shape
 
@@ -205,6 +223,8 @@ Each agent returns finished PT-BR markdown for its one file. **You** write the f
 
 `context.md` must list **exactly** the files that exist — no dead links, no omissions. Build it from your doc plan after confirming each file was written. Do **not** put the end-to-end trace here (that is `overview.md`).
 
+**Then reconcile the root routers (full mode).** Once `context.md` exists, check `CLAUDE.md` and `AGENTS.md` at the repo root against it (see "CLAUDE.md / AGENTS.md — the root routers must point here"): each must point at `context.md` (never the abolished `docs/codebase/README.md`), carry the token-frugal one-doc loading rule, name `sdd:codebase` (full + diff) for staleness, and mirror each other. Auto-fix any drift; create either router if missing. This is the one place the skill writes outside `docs/codebase/`, and it's intentional — the routers are the map's front door.
+
 ### Step 4 — Diff mode (replaces Steps 1–3 in diff mode)
 
 1. Detect the base branch: try `git symbolic-ref refs/remotes/origin/HEAD` (the remote's default), else `git remote show origin`, else the first that exists among `main`/`master`/`develop`/`prod`. Then `BASE=$(git merge-base <base-branch> HEAD)`. If `merge-base` fails (shallow clone — common in CI), run `git fetch --unshallow` (or `--deepen=100`) first, or fall back to diffing against the base branch tip directly. If you truly cannot establish a base, **say so and switch to full mode** rather than guessing a diff.
@@ -212,7 +232,8 @@ Each agent returns finished PT-BR markdown for its one file. **You** write the f
 3. Route each changed path to affected docs (table below). A changed file may map to an existing doc *or* reveal a brand-new concept needing a new doc.
 4. Dispatch agents only for affected docs. Each diff-agent reads the existing doc + the changed files and returns it with a `## Changelog` line appended (`- YYYY-MM-DD: <o que mudou>`) and its `generated:` frontmatter date refreshed. Pass the date in — do not let the agent compute it.
 5. If the set of files changed (a doc added or removed), **regenerate `context.md`** (Step 3). Even if the file set is unchanged, refresh `context.md`'s "Invariantes enforced" if an enforcer config (lint boundaries, hooks, coverage threshold, a global interceptor) was among the changed paths — a changed enforcer means the contract `sdd:plan` checks against changed. Otherwise leave `context.md` byte-identical.
-6. Leave every unaffected doc byte-identical.
+6. **Reconcile the root routers when relevant.** If the doc set changed (a routing-table entry may now be stale) or `context.md` was regenerated, re-check `CLAUDE.md`/`AGENTS.md` against `context.md` and auto-fix any drift (link target, the one-doc loading rule, the `sdd:codebase` mention, mirror parity). If neither changed, leave the routers byte-identical. Report any router edit.
+7. Leave every unaffected doc byte-identical.
 
 **Path → doc routing:**
 
@@ -237,6 +258,7 @@ Each agent returns finished PT-BR markdown for its one file. **You** write the f
 - **Verify `context.md`:** every line under "Invariantes enforced" names a real mechanism at a real path (the rule is *enforced*, not just claimed); the "Carregamento por tarefa" pointers reference docs that exist; the core stays lean (~500 tokens). A vague invariant with no mechanism is the failure mode this section exists to prevent — fix or downgrade it.
 - Spot-check that each `concerns/` finding carries a real `ancora: caminho:linha`, a `severidade` enum, and a stable `id`. A concern that isn't machine-parseable defeats the `sdd:plan` ingestion — cut it or fix it.
 - Confirm every `context.md` link resolves to a real file and every real file is linked (no orphans, no dead links).
+- **Verify the root routers.** `CLAUDE.md` and `AGENTS.md` both exist (full mode), point at `docs/codebase/context.md` (not `README.md`), carry the one-doc token-frugal loading rule, name `sdd:codebase`, and mirror each other. Any router link must resolve to a real file. A router still pointing at the abolished `docs/codebase/README.md` is the canonical drift this check exists to catch.
 - **Coverage gate (full mode).** Before declaring done, cross-check the doc plan against the recon facts so nothing real went unmapped:
   - **Integrations:** list the runtime libs found in real `import`/`require`/`use`/`include` statements in app code. Every one that shapes runtime behavior must have its own `integrations/*.md` (per the one-lib-one-doc rule). If a lib appears in app imports but has no doc — and is not a thin plugin of a documented lib — that is a gap: add the doc and re-verify. Name the check in the report ("N runtime libs imported, N integration docs").
   - **Testing:** if any test runner / test script / test file exists, `conventions/testing.md` must exist. If it doesn't, that is a gap, not a choice.
@@ -244,7 +266,7 @@ Each agent returns finished PT-BR markdown for its one file. **You** write the f
   - **Layers & patterns:** every layer folder a representative module actually has → a `layers/*` doc; every tactical pattern with ≥2 occurrences → a `patterns/*` doc. A real layer/pattern with no doc is a gap.
   - **Invariantes enforced parity:** every enforcer found in Step 1 (lint boundary rule, coverage threshold, hook, global interceptor) appears as a line in `context.md`. A real enforcer with no line is a gap — the consuming phase would miss a project rule.
   - This gate is what makes the map "100% mapped" — a fresh full run must leave no real integration, layer, recurring pattern, test suite, or enforced invariant undocumented. Run it before writing the report; close any gap found, don't just note it.
-- Report: mode, files written/updated/pruned, any agent that failed twice, the final doc plan, the coverage-gate result (libs imported vs docs, testing doc present, enforcers vs invariant lines), any unverifiable claim.
+- Report: mode, files written/updated/pruned, any agent that failed twice, the final doc plan, the coverage-gate result (libs imported vs docs, testing doc present, enforcers vs invariant lines), **the router reconciliation (CLAUDE.md/AGENTS.md: in-sync / fixed-what / created)**, any unverifiable claim.
 
 ## Quality rules
 
@@ -262,7 +284,9 @@ Each agent returns finished PT-BR markdown for its one file. **You** write the f
 | Mistake | Fix |
 |---|---|
 | Generating a flat list of docs with no `context.md` router | `context.md` *is* the map's entry point. Assemble it last, over the real file set. |
-| Touching the repo's root `README.md` | That file is operational and human-owned. This skill writes only under `docs/codebase/`. `context.md` may link to the root README, never edit it. |
+| Touching the repo's root `README.md` | That file is operational and human-owned. This skill writes only under `docs/codebase/` (plus the CLAUDE.md/AGENTS.md routers). `context.md` may link to the root README, never edit it. |
+| Leaving CLAUDE.md/AGENTS.md pointing at `docs/codebase/README.md` | That router was abolished for `context.md`. Auto-fix both root routers to point at `context.md`, keep them mirrored, and carry the one-doc loading rule + the `sdd:codebase` mention. |
+| Editing root files other than the two routers | The exception is exactly CLAUDE.md + AGENTS.md. Nothing else at the root — not `README.md`, not `package.json`. |
 | Putting an invariant in `context.md` with no enforcing mechanism | "Invariantes enforced" means enforced. Each line names the lint rule / hook / type / interceptor at its real path. A rule with no mechanism is an aspiration — move it to a "sem enforcement" note or drop it. |
 | Keeping a global `mapped_at: <sha>` to track staleness | A global SHA lies about per-doc staleness. Use `generated:` + `sources:` in frontmatter — staleness is then "any commit after `generated` touched a `sources` path?", per-doc. |
 | Forcing the seru repo's exact doc list onto a different stack | Discover the doc set from the *target* repo. The tree shape is fixed; the contents are not. Use that repo's own manifest/import graph — `package.json` for JS, `pyproject.toml`/imports for Python, `go.mod` for Go, etc. The six dirs and the doc archetype stay identical across languages; only the discovered content changes. |

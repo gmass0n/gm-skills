@@ -29,7 +29,7 @@ Interview the user relentlessly about every aspect of the feature until you reac
 **Core rules of the interview:**
 - **One question at a time.** Asking several at once is bewildering and produces shallow answers. Wait for the answer before the next question.
 - **Always carry your recommendation.** For every question, you already did the thinking — present the option you'd choose first, marked as recommended, with the reasoning. The user is reacting to a proposal, not generating an answer from scratch.
-- **Explore the code instead of asking, whenever you can.** If a question is answerable by reading the repo (how does the existing auth guard work? what shape does the SERU client return?), go read it. Only ask the user what the code cannot tell you — product intent, priorities, trade-offs, things not yet decided.
+- **Explore the code instead of asking, whenever you can — via a subagent, never in your own context.** If a question is answerable by reading the repo (how does the existing auth guard work? what shape does the SERU client return?), dispatch an `Explore` subagent to find it and return just the answer. You stay the orchestrator: the interview and `spec.md` are yours (they need the user), but code reading is delegated so the raw file bytes never accumulate in your context. Only ask the user what the code cannot tell you — product intent, priorities, trade-offs, things not yet decided.
 - **Ask via the native question UI.** Use the `AskUserQuestion` tool so the user gets selectable options, can add notes, and can step away — the same feel as a brainstorming session. Free-text prose questions invite you to fill the silence with an assumption; structured options make the user's choice explicit. Put the recommended option first and label it "(recomendado)".
 
 The interview ends only when the spec has **zero** open clarifications (see the loop below) and the user confirms the picture is complete.
@@ -112,6 +112,7 @@ When the loop exits (zero clarifications, user confirms):
 
 - **No code, no design.** No class names, no file layout, no "we'll use an Observable". That is `sdd:plan`. If you catch yourself writing HOW, move it to the decision log as a constraint or drop it.
 - **No writing outside `docs/specs/<feature>/`.** The codebase map is read-only input.
+- **No reading repo source in your own context.** Delegate code exploration to an `Explore` subagent and keep only its answer. The main agent orchestrates the interview; it doesn't fill itself with file bytes.
 - **No finishing with open ambiguity.** The loop exists precisely so the spec can never be "done but vague".
 - **No language drift.** Whatever the initiating prompt was, stay in it.
 

@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Use to turn an approved spec into an executable implementation plan — Phase 2 (DESIGN + TASKS) of the SDD workflow, after sdd:spec and before sdd:implement. Reads docs/specs/<feature>/spec.md plus the codebase map, then writes a single docs/specs/<feature>/plan.md with the technical design (anchored to real project patterns, every decision tied to a REQ-ID) and an atomic task breakdown carrying stable IDs, a requirement→task→test coverage matrix, dependency graph, and pre-computed batches. Trigger whenever the user wants to plan a feature, design the implementation, break work into tasks, or says "plan this", "how do we build X", "make the task list" — and always after a spec exists. The plan is the contract sdd:implement executes against, so it will not finish while any requirement is uncovered or any decision contradicts the project's enforced invariants.
+description: Use to turn an approved spec into an executable implementation plan — Phase 2 (DESIGN + TASKS) of the SDD workflow, after sdd:spec and before sdd:implement. The main agent orchestrates: it dispatches subagents (in parallel) to read the codebase map, investigate the exact files, and confirm external APIs, then synthesizes their digests — never reading raw source into its own context. Writes a single docs/specs/<feature>/plan.md with the technical design (anchored to real project patterns, every decision tied to a REQ-ID) and an atomic task breakdown carrying stable IDs plus per-task TDD Steps detailed enough that sdd:implement executes without re-analyzing, a requirement→task→test coverage matrix, dependency graph, and pre-computed batches. A /analyze subagent runs in a loop until clean. Trigger whenever the user wants to plan a feature, design the implementation, break work into tasks, or says "plan this", "how do we build X", "make the task list" — and always after a spec exists. The plan is the contract sdd:implement executes against, so it will not finish while any requirement is uncovered or any decision contradicts the project's enforced invariants.
 ---
 
 # SDD — Plan (Phase 2: Design + Tasks)
@@ -15,7 +15,7 @@ One file, one approval gate. Design and tasks live together because you refine t
 
 **`plan.md` is the contract `sdd:implement` executes.** Almost all of the workflow's intelligence lives in the Tasks section: the IDs, the dependency graph, the file sets, the coverage matrix. If the plan encodes those well, the implementer can be simple and safe. If it encodes them poorly, nothing downstream works. So spend the effort here.
 
-This phase reads `spec.md` and the codebase map; it writes only `plan.md`.
+This phase reads `spec.md` and — through subagents — the codebase map; the main agent writes only `plan.md`. You orchestrate the analysis; you don't pull raw source into your own context (see "You orchestrate; subagents analyze" below).
 
 ## Preconditions — refuse rather than build on sand
 
@@ -25,13 +25,18 @@ Before doing anything, check the spec:
 
 **Inherit the language.** Read `lang:` from the spec's frontmatter. The whole `plan.md` is written in that language — never re-detect, never switch. The spec owner chose it.
 
-## Ground the design in the real codebase
+## You orchestrate; subagents analyze
 
-A plan that invents its own architecture is worse than useless in a brownfield — it produces code that fights the existing patterns. Read `docs/codebase/context.md` and load **only** the docs its "Carregamento por tarefa" pointers name for this kind of feature (selective loading — don't read all 30 docs). The context.md also gives you the **Invariantes enforced**, which the design must respect and which `/analyze` will check against at the end.
+You are the **orchestrator** of this phase. You don't read the codebase into your own context — you dispatch subagents to analyze, and you synthesize their returns into `plan.md`. The synthesis (design, tasks, matrix, batches) is yours; the reading is delegated. This keeps your context lean and is the main token win of the phase: raw file bytes and doc dumps stay in the subagents.
+
+What goes to subagents, run in **parallel** when independent:
+- **Reading the codebase map** — one `Explore` subagent loads the docs `context.md`'s "Carregamento por tarefa" names for this feature (selective — not all 30) and returns the patterns, layer rules, and **Invariantes enforced** as a digest.
+- **Investigating specific files** — the exact signatures, line ranges, and trechos each task's Steps will need. This is the analysis that gets *cached as Steps* so `sdd:implement` never re-analyzes.
+- **Confirming external APIs** — a subagent uses Context7 to verify current library APIs rather than you guessing.
+
+You receive digests, not raw files, and weave them into the design and the Steps.
 
 If a relevant codebase doc looks stale (its `sources` changed after its `generated:` date), recommend `sdd:codebase diff` before planning — otherwise the design anchors to a false picture.
-
-For external libraries, use Context7 to confirm current APIs rather than guessing.
 
 ## The Design section
 
@@ -43,7 +48,7 @@ The HOW, in technical terms, satisfying the spec. Keep it anchored and traceable
 
 ## The Tasks section — where the intelligence lives
 
-Break the work into **atomic tasks**. Each task has stable metadata that downstream phases parse mechanically. Follow `templates/plan.template.md` for the exact shape:
+Break the work into **atomic tasks**. Each task has two parts: stable **metadata** that downstream phases parse mechanically, and an ordered list of **Steps** that the executor follows literally. Follow `templates/plan.template.md` for the exact shape:
 
 ```
 ### T-3  [!]
@@ -52,10 +57,26 @@ Break the work into **atomic tasks**. Each task has stable metadata that downstr
 - Arquivos: src/.../seru-notification.adapter.ts, src/.../tests/...spec.ts
 - Verificação: teste `should emit order.status on change` cobre o critério de REQ-1
 - Lote: L-2                     # pre-computed (see batching below)
+
+- [ ] **Step 1 (RED):** escrever teste failing `should emit...`; rodar `yarn test ...` → ver falhar
+- [ ] **Step 2 (GREEN):** implementar <trecho só se não-óbvio>; rodar → ver passar
+- [ ] **Step 3 (REFACTOR):** limpar; rodar → verde
+- [ ] **Step 4 (COMMIT):** `feat(...): ...`
 ```
 
 - **`T-<n>` IDs are stable** — they're how `sdd:implement` targets a single task (`sdd:implement T-3`) and how the matrix traces coverage. Never renumber.
 - **`Verificação` names the test**, and that test must cover an acceptance criterion from the spec. This is the link that makes "everything is tested" mechanical rather than hopeful.
+
+### Steps are where the analysis you do here gets cached for the executor
+
+This is the heart of the division of labor. **`sdd:implement` does not analyze the codebase — it only executes.** That is only possible if *you* do all the analysis now and write it down as Steps concrete enough to follow blind:
+
+- Every task carries **Steps** in checkbox form (`- [ ]`), in strict TDD order: RED (write the failing test, run it, watch it fail) → GREEN (minimal code, run it, watch it pass) → REFACTOR → a final atomic COMMIT. One RED→GREEN cycle per `Verificação` criterion.
+- Each Step names the **file** it touches and the **exact command** to verify it (`yarn test <spec>`, `yarn tsc --noEmit`). The executor never has to guess what to run.
+- Embed a **code trecho only when the edit is non-obvious** — a new signature, a conditional spread, a SQL fragment. A trivial edit (add a field to a DTO) is one descriptive line, no code block. Over-embedding bloats the plan; under-embedding forces the executor to analyze. Judge per edit.
+- The test is the rule of thumb for "detailed enough": if a fresh subagent with only this task's block (no map, no repo tour) could carry out the Steps and land the commit, the task is complete. If it would have to go read source to know *how*, the Step is too thin — that missing analysis is your job, here, not the executor's.
+
+Doing the analysis once, here, and caching it as Steps is also the token win: the executor loads a ~500-token task block instead of re-reading the codebase map per task.
 
 ### The two orthogonal axes — don't conflate them
 
@@ -99,7 +120,9 @@ Coverage (the matrix) proves every requirement has a task. It does **not** prove
 
 This is **not** a heavy semantic analyzer. It's three lookups against existing data.
 
-**Same loop + persistence as the spec's clarification loop:** the plan does not finish while an inconsistency is open. The moment you find one, write a marker into `plan.md` now — `[ANALYSIS: T-4 viola boundary domain→infra de context.md]` — so the state survives a dead session. Resolve it (fix the design/task, remove the marker), and only finish when zero `[ANALYSIS]` markers remain. The gate at the start of `sdd:implement` is the safety net for the dropped-session case.
+**Run `/analyze` in a subagent — and loop.** Dispatch a subagent with the spec's REQ-IDs, the plan's matrix/Origem fields, and context.md's enforced invariants; it returns the list of inconsistencies (phantom REQs, uncovered REQs, boundary violations). You stay the orchestrator: you read its verdict and fix the plan, you don't run the checks in your own context. Then **loop** — after you fix the design/tasks, dispatch a *fresh* `/analyze` subagent to re-verify against the corrected plan. Repeat until a run comes back clean. A single pass can miss an inconsistency introduced *by* the fix; the loop is what guarantees convergence.
+
+**Same persistence as the spec's clarification loop:** the plan does not finish while an inconsistency is open. The moment a subagent reports one, write a marker into `plan.md` now — `[ANALYSIS: T-4 viola boundary domain→infra de context.md]` — so the state survives a dead session. Resolve it (fix the design/task, remove the marker), re-run the subagent, and only finish when an `/analyze` run returns zero findings and zero `[ANALYSIS]` markers remain. The gate at the start of `sdd:implement` is the safety net for the dropped-session case.
 
 ## Scoped concern remediation — opt-in, never automatic
 
@@ -119,6 +142,8 @@ When the matrix is complete (every REQ covered) and `/analyze` is clean (zero `[
 - **No finishing with an uncovered REQ or open `[ANALYSIS]`.** The matrix and the analyze loop are the guarantees; bypassing them defeats the whole proof chain.
 - **No self-declared `[P]`.** Parallelizability is computed from the file matrix, always.
 - **No design that contradicts an enforced invariant.** If context.md says the lint forbids it, the plan can't propose it.
+- **No reading the codebase into your own context.** Delegate analysis to subagents and synthesize their digests. The main agent orchestrates; it doesn't accumulate file bytes.
+- **No task without executable Steps.** Metadata alone isn't enough — the Steps must be detailed enough that `sdd:implement` runs them without analyzing. Thin Steps push analysis downstream, which is the bug this design exists to prevent.
 - **No language drift.** Inherit `lang:` from the spec.
 
 ## Common mistakes
@@ -133,3 +158,6 @@ When the matrix is complete (every REQ covered) and `/analyze` is clean (zero `[
 | Running a heavy semantic analysis for `/analyze` | Three list-checks against the spec, the matrix, and context.md's enforced invariants. Lean by design. |
 | Auto-adding every concern as a task | Scoped + opt-in only: concerns whose anchor touches the feature's files, presented for the user to accept. |
 | Re-deriving decisions the spec already settled | The spec's decision log is input, not a starting point. Build what it decided. |
+| Reading the codebase into your own context | Dispatch subagents to analyze; synthesize their digests. You orchestrate, you don't accumulate file bytes. |
+| Tasks with only metadata, no Steps | Write per-task TDD Steps detailed enough that the executor runs them blind. Thin Steps push analysis into `sdd:implement`. |
+| Running `/analyze` once, inline | Run it in a subagent and loop until a run is clean — a fix can introduce a new inconsistency the first pass misses. |

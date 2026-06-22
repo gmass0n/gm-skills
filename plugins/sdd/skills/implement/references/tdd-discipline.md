@@ -1,6 +1,6 @@
 # TDD discipline — read when a task tempts you to skip the red step
 
-The operational loop (RED → watch fail → GREEN → watch pass → REFACTOR → commit) is in SKILL.md. This file is the *why* and the defense against the rationalizations that quietly erode it. Read it when a test is awkward to write, when the code seems "too simple to test", or when you catch yourself about to write code first.
+The operational loop (RED → watch fail → GREEN → watch pass → REFACTOR, repeated per `Verificação` criterion, then one atomic commit) is in SKILL.md, and the plan's per-task Steps already lay it out in order. This file is the *why* and the defense against the rationalizations that quietly erode it. Read it when a test is awkward to write, when the code seems "too simple to test", or when you catch yourself about to write code first.
 
 ## The core principle
 

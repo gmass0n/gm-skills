@@ -19,6 +19,16 @@ generated: <data>
 
 # Plan: <feature>
 
+> **Para os executores (sdd:implement):** cada task é executada por um subagente fresco que apenas SEGUE os Steps abaixo, em ordem, sem analisar a codebase — toda a análise já foi feita aqui. Steps usam checkbox (`- [ ]`) e seguem TDD: RED → GREEN → REFACTOR → COMMIT.
+
+**Goal:** <o que esta feature entrega, em 1-2 frases. Inclui bug colateral corrigido, se houver.>
+
+**Architecture:** <a abordagem técnica em 1-3 frases: o pipeline/fluxo que a mudança percorre e os padrões reais que segue.>
+
+**Tech Stack:** <stack relevante à feature — ex: NestJS, TypeScript, CQRS, TypeORM, Jest.>
+
+---
+
 ## Design
 
 ### Visão da solução
@@ -41,21 +51,49 @@ generated: <data>
 ## Tasks
 
 <cada task é atômica. T-<n> estável. [!] = crítica (lote solo). [P] NÃO se declara aqui —
- é computado da interseção de Arquivos; o plan registra o resultado no campo Lote.>
+ é computado da interseção de Arquivos; o plan registra o resultado no campo Lote.
+
+ Os campos de metadados (Origem/Depende de/Arquivos/Verificação/Lote) são o CONTRATO parseável.
+ Os Steps abaixo deles são o ROTEIRO de execução: o subagente do implement só os segue, não decide.
+ Cada task começa com um teste failing e termina num commit atômico — TDD, sem exceção.
+
+ Regra dos Steps: SEMPRE checkbox + arquivo + comando de verificação. Trecho de código embutido
+ SÓ quando o edit é não-óbvio (uma assinatura nova, um spread condicional, um SQL). Edit trivial
+ (adicionar um campo a um DTO) descreve-se em uma linha, sem bloco de código.>
 
 ### T-1
 - Origem: REQ-2
 - Depende de: —
-- Arquivos: src/modules/notification/domain/ports/notification-gateway.port.ts
+- Arquivos: src/modules/notification/domain/ports/notification-gateway.port.ts, src/.../tests/notification-gateway.port.spec.ts
 - Verificação: teste `should expose stream contract` cobre o critério de REQ-2
 - Lote: L-1
+
+- [ ] **Step 1 (RED):** escrever teste failing `should expose stream contract` no `.spec.ts`, asserindo o contrato observável de REQ-2. Rodar `yarn test notification-gateway.port.spec` → ver FALHAR na asserção (não em import/sintaxe).
+- [ ] **Step 2 (GREEN):** definir a port mínima que satisfaz o teste. Rodar o teste → ver PASSAR.
+- [ ] **Step 3 (REFACTOR):** limpar com o teste como rede. Rodar de novo → verde.
+- [ ] **Step 4 (COMMIT):** `feat(notification): expor contrato de stream na port` (Conventional Commits, inglês).
 
 ### T-2  [!]
 - Origem: REQ-1, REQ-3
 - Depende de: T-1
 - Arquivos: src/modules/notification/infrastructure/seru/seru-notification.adapter.ts, src/.../tests/seru-notification.adapter.spec.ts
-- Verificação: teste `should emit order.status on change` cobre o critério de REQ-1; `should auto-reconnect` cobre REQ-3
+- Verificação: teste `should emit order.status on change` cobre o critério de REQ-1; `should auto-reconnect on drop` cobre REQ-3
 - Lote: L-2
+
+- [ ] **Step 1 (RED):** escrever teste failing `should emit order.status on change`. Rodar → ver FALHAR.
+- [ ] **Step 2 (GREEN):** implementar `streamStatus()` no adapter. Trecho não-óbvio (assina upstream e remapeia):
+  ```ts
+  streamStatus(orderCode: string): Observable<OrderStatusEvent> {
+    return this.upstream.subscribe(orderCode).pipe(
+      map((raw) => new OrderStatusEvent(raw.code, raw.status)),
+    );
+  }
+  ```
+  Rodar o teste → ver PASSAR.
+- [ ] **Step 3 (RED):** escrever teste failing `should auto-reconnect on drop` (REQ-3). Rodar → ver FALHAR.
+- [ ] **Step 4 (GREEN):** adicionar `retryWhen`/backoff ao pipe. Rodar os dois testes → verde.
+- [ ] **Step 5 (REFACTOR):** extrair o backoff se repetir. Rodar → verde.
+- [ ] **Step 6 (COMMIT):** `feat(notification): emitir order.status e reconectar no adapter SERU`.
 
 ## Lotes
 
@@ -90,6 +128,9 @@ generated: <data>
 
 ## Regras de preenchimento
 
+- **Steps são o roteiro de execução.** Toda task tem Steps em checkbox que o subagente do implement segue sem analisar nada. A análise da codebase acontece AQUI, no plan; o implement só executa. Steps mal-feitos forçam o implement a analisar — exatamente o que o design quer impedir.
+- **Steps seguem TDD.** Ordem fixa por critério de `Verificação`: RED (teste failing + rodar + ver falhar) → GREEN (código mínimo + rodar + ver passar) → REFACTOR → e um COMMIT atômico ao fim da task. Cada Step de teste nomeia o comando real (`yarn test ...`).
+- **Trecho de código só quando não-óbvio.** Sempre checkbox + arquivo + comando. Bloco de código embutido apenas para edits não-triviais (assinatura nova, spread condicional, SQL); edit trivial vira uma linha de descrição.
 - **Task atômica, ID estável.** `T-<n>` nunca renumerado — é o alvo de `sdd:implement T-n` e a chave da matriz.
 - **`Verificação` nomeia o teste** que cobre um critério de aceite da spec. Sem teste nomeado, a task está fora da cadeia de provas.
 - **`[!]` é marcado; `[P]`/`Lote` é computado.** Criticidade você decide (heurística + override do dev). Paralelizabilidade vem da interseção de `Arquivos` + lista quente (`*.module.ts`, `env.schema.ts`, contratos) — o resultado vira o `Lote`.
