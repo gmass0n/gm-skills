@@ -49,6 +49,39 @@ classificar subfolder novo, etc.>
 - Cross-linke dos `architecture/*` e `patterns/*` PARA este doc — é aqui que o enforcement deles é detalhado.
 - Naming/estrutura: documente o que o código faz, inclusive inconsistências. Não invente o ideal.
 
+## Testing é uma família dedicada — nunca um parágrafo solto
+
+`testing.md` é sempre seu próprio doc quando o repo tem qualquer suíte (não dobre dentro de quality-gates). Além de stack/comandos/coverage, **declare explicitamente** as três regras que humanos esquecem — é para torná-las lei que o mapa existe:
+
+1. **Co-localização do spec** — onde o spec vive *em relação ao arquivo que testa*, na granularidade real do repo. Leia 5–10 pares source→spec de sub-camadas diferentes e prove com um caminho real. Ex.: spec mora em `tests/` dentro da **própria** sub-camada (`dtos/tests/`, `mappers/tests/`, `http/tests/`), nunca num `tests/` genérico da camada acima.
+2. **Cobertura por artefato** — quais artefatos *obrigatoriamente* têm spec co-localizado (ex.: todo dto/mapper/controller). Se um artefato real está sem spec, isso vira achado em `concerns/`.
+3. **Postura TDD** — se o repo declara test-first em qualquer lugar (testing.md, CLAUDE.md, AGENTS.md, contributing), registre como política, não sugestão. Se um hook/CI torna obrigatório, também entra em `context.md` › Invariantes enforced.
+
+`## Anti-padrões` do `testing.md` nomeia o erro literal: `❌ mapper/dto/controller sem spec`, `❌ spec fora do tests/ da própria sub-camada`.
+
+### Exemplo de `testing.md` (repo NestJS com mirror por sub-camada)
+
+```markdown
+# Testing
+
+## Regra-de-ouro
+Todo dto/mapper/controller tem spec, e o spec vive em `tests/` DENTRO da própria
+sub-camada do arquivo — `dtos/tests/`, `mappers/tests/`, `http/tests/` —, nunca num
+`tests/` genérico da camada acima. Desenvolvimento é test-first (TDD).
+
+## Co-localização (mirror por sub-camada)
+\`\`\`
+http/dtos/list-notifications.query.dto.ts
+http/dtos/tests/list-notifications.query.dto.spec.ts      // mesmo dir + tests/
+http/mappers/notification-http.mapper.ts
+http/mappers/tests/notification-http.mapper.spec.ts
+\`\`\`
+
+## Anti-padrões
+- ❌ mapper/dto/controller sem spec.
+- ❌ spec de dto/mapper fora do `tests/` da própria sub-camada (ex.: num `http/tests/` solto).
+```
+
 ## Exemplo (extraído de um repo NestJS — adapte ao stack alvo)
 
 ```markdown

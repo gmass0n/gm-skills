@@ -49,6 +49,17 @@ Your job:
    [mapper-pattern.md](../patterns/mapper-pattern.md). Use the doc plan to know what exists.
 8. Observed reality, not ideals. Include inconsistencies. Omit empty sections —
    do not invent content to fill space.
+   IF YOUR TARGET IS `conventions/testing.md`: it must state three things explicitly,
+   each backed by real paths — (a) spec co-location: where a spec lives relative to the
+   file it tests, at the repo's real granularity (open 5–10 source/spec pairs across
+   different sub-layers; e.g. spec in `tests/` inside the file's OWN sub-layer —
+   `dtos/tests/`, `mappers/tests/`, `http/tests/` — not a generic layer-level `tests/`),
+   with at least one real source→spec path pair proving it; (b) per-artifact coverage:
+   which artifacts must have a co-located spec (e.g. every dto/mapper/controller), as the
+   repo states it; (c) TDD stance: if the repo declares test-first anywhere, record it as
+   policy. Your `## Anti-padrões` names the literal mistakes — `❌ mapper/dto/controller
+   sem spec`, `❌ spec fora do tests/ da própria sub-camada`. Read the rule from the repo;
+   do not assume a granularity it doesn't use.
 9. Stay near the size target. The canonical style is lean — one real code excerpt
    beats three paragraphs of prose. If you're way over, you're padding; cut it. If the
    topic genuinely needs more, the doc set is probably missing a sibling doc — note that.
