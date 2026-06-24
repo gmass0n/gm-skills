@@ -43,10 +43,31 @@ Concretely, walk every branch to its leaves: happy path **and** every edge (empt
 
 Four interview behaviors that protect the chain:
 
-- **Resolve scope/framing before product detail.** First settle the boundary questions — which repos/layers this touches, what's frontend vs backend, what's explicitly out — *before* drilling product behavior. A product answer decided under the wrong frame is wasted. (Here: BFF-vs-frontend and the 4-repo chain had to be settled before anything else made sense.)
+- **Resolve scope/framing before product detail.** First settle the boundary questions — which repos/layers this touches, what's frontend vs backend, what's explicitly out — *before* drilling product behavior. A product answer decided under the wrong frame is wasted. **When the feature touches more than one repo, resolving the repo topology is not advice — it is the mandatory FIRST step, before any product detail.** Run the boundary question per repo: does this repo **PRODUCE**, **TRANSFORM**, or **CONSUME** the new data/contract? Producer mints it, transformer reshapes/forwards it, consumer reads it. Those roles order the repos into a chain (produce → transform → consume), and that chain — not prose — is what you write into `## Repos envolvidos` (see "Multi-repo topology" below). Single-repo features skip this entirely. (Here: the `operational-map` chain locations-api → customer-api → BFF → portal had to be settled before anything else made sense — geocoding *produced* in locations-api, *transformed*/forwarded through customer-api and the BFF, *consumed* in the portal.)
 - **When a new fact invalidates a settled decision, recompute the cascade.** Decisions depend on each other. When exploration or a user answer overturns an earlier one, do not leave the spec contradictory — reopen every decision and REQ that depended on it and rewrite them, leaving a "substitui a decisão anterior" trace so the history is legible. A spec that contradicts itself is worse than one with open markers. (Here: geocoding moved repos three times — BFF → customer-api → locations-api — each move rewrote the affected D-items and REQs.)
 - **When the user delegates the decision back to you, deliver a verdict — don't bounce it.** If the user answers "which is best?" / "you decide" instead of choosing, that is not permission to skip the decision; it is a request for your reasoned recommendation. Give a grounded verdict with the trade-off, and for a technical choice of real consequence (a library, a provider, an architecture), back it with a quick market/community check (`WebSearch`) rather than training-memory alone. Then record it as a decision. (Here: the map library and the geocoder were both delegated and resolved with a researched verdict.)
 - **Check each answer against the decision log before persisting it.** Before writing a user's answer into the spec, scan whether it contradicts a decision already recorded. If it does, surface the tension *before* persisting and let the user reconcile — they may have misclicked, or the new answer may be the one that forces a cascade. Never silently write a contradiction. (Here: a multi-company answer collided with the already-settled "line connects order to its store" decision; raising it caught a misselection.)
+
+## Multi-repo topology — a first-class artifact, not prose
+
+**Condition: only when the feature touches more than one repo.** Single-repo features omit the `## Repos envolvidos` block entirely and tag no REQs — the spec is byte-identical to the single-repo shape. Everything in this section is conditional on that gate.
+
+The old failure was treating the repo chain as narrative: the interview settled "this crosses 4 repos" in prose, then `sdd:plan` re-discovered each repo's local root, slug, base branch, and clone path from scratch. The fix: **the multi-repo analysis is born here, in the spec, as a parseable record the plan reads directly.** The plan inherits the topology; it never re-derives it.
+
+Two artifacts come out of the boundary question above:
+
+1. **`## Repos envolvidos`** — a parseable table the plan reads verbatim. One row per repo, ordered along the chain, plus a one-line `Cadeia:`. Columns:
+   - `tag` — short handle (`LOC`, `CUS`, `BFF`, `POR`) used to tag REQs and, later, tasks.
+   - `repo (slug)` — the real repo slug (`pos-facil-api`, etc.), not a friendly name.
+   - `papel` — `produz` / `transforma` / `consome` (from the boundary question).
+   - `branch base` — `master` / `develop` (where this repo's feature branch forks from).
+   - `clonado?` — `sim` / `não` / `<onde>` (is the repo cloned locally, and where — so the plan doesn't re-discover it).
+
+   Settle each cell during the interview (dispatch an `Explore` subagent for slug/base-branch/clone facts the code or filesystem can answer; ask the user only product-intent gaps). Any cell you can't pin down is an ambiguity → `[NEEDS CLARIFICATION]`, same loop as everything else.
+
+2. **REQ→repo map.** Every requirement names which repo satisfies it by appending its tag: `… SHALL … (repo: BFF)`. This is the seam the plan reads to derive each task's `Repo:` field — **say it plainly so the plan-side skill can rely on it: the plan does not guess a task's repo, it carries up the tag from the REQ that task implements.** A REQ spanning two repos splits into two REQs (one per repo) rather than carrying two tags — keeps the map one-to-one and the chain legible.
+
+See `templates/spec.template.md` for the materialized block and a tagged-REQ example.
 
 ## The clarification loop — the heart of this phase
 
@@ -86,13 +107,26 @@ generated: <data>
 ## Contexto e objetivo
 <por que isto existe, que problema do usuário resolve. 2-3 frases. Sem código.>
 
+## Repos envolvidos
+<APENAS multi-repo; em single-repo OMITA esta seção inteira. Tabela parseável que o plan lê direto.>
+| tag | repo (slug) | papel | branch base | clonado? |
+|-----|-------------|-------|-------------|----------|
+| LOC | locations-api | produz | master | sim |
+| CUS | pos-facil-api | transforma | master | sim |
+| BFF | seru-delivery-api | transforma | develop | sim (este repo) |
+| POR | seru-delivery-portal | consome | develop | não |
+
+Cadeia: LOC → CUS → BFF → POR
+
 ## User stories
 - US-1: Como <persona>, quero <capacidade> para <benefício>.
 
 ## Requisitos (EARS, com REQ-IDs)
-<cada requisito é testável e observável. EARS: WHEN/WHILE/IF ... THE sistema SHALL ...>
-- REQ-1: WHEN <evento>, THE sistema SHALL <comportamento observável>.
-- REQ-2: WHILE <estado>, THE sistema SHALL <comportamento>.
+<cada requisito é testável e observável. EARS: WHEN/WHILE/IF ... THE sistema SHALL ...
+ Multi-repo: cada REQ termina com (repo: <tag>) — o plan deriva o Repo: da task daqui.
+ Single-repo: sem tag.>
+- REQ-1: WHEN <evento>, THE sistema SHALL <comportamento observável>. (repo: BFF)
+- REQ-2: WHILE <estado>, THE sistema SHALL <comportamento>. (repo: LOC)
 
 ## Critérios de aceite (por requisito)
 - REQ-1: dado <contexto>, quando <ação>, então <resultado verificável>.
@@ -119,8 +153,8 @@ A requirement that passes the coverage matrix but is untestable is a false green
 
 When the loop exits (zero clarifications, user confirms):
 1. Set `status: ready` in the frontmatter.
-2. Confirm `spec.md` has REQ-IDs, acceptance criteria, the decision log, and an empty "Clarificações pendentes".
-3. Hand off explicitly: tell the user the spec is ready at `docs/specs/<feature>/spec.md` and the next step is `sdd:plan <feature>`. There is no orchestrator that chains automatically — the handoff line is how the user knows where they are.
+2. Confirm `spec.md` has REQ-IDs, acceptance criteria, the decision log, and an empty "Clarificações pendentes". **Multi-repo: also confirm the `## Repos envolvidos` table is complete (no unresolved cells), the `Cadeia:` line is present, and every REQ carries a `(repo: <tag>)`.**
+3. Hand off explicitly: tell the user the spec is ready at `docs/specs/<feature>/spec.md` and the next step is `sdd:plan <feature>`. There is no orchestrator that chains automatically — the handoff line is how the user knows where they are. **In multi-repo, what descends to the plan is DATA, not just a command: the `## Repos envolvidos` record, the `Cadeia:` chain, and the REQ→repo map. The plan reads the topology from these — it does not re-discover root/slug/branch/clone per repo. State this in the handoff line so the user knows the topology is already settled.**
 
 ## What this skill must not do
 
@@ -146,3 +180,4 @@ When the loop exits (zero clarifications, user confirms):
 | Bouncing "you decide" back to the user | Deliver a reasoned verdict; research it (`WebSearch`) for consequential technical choices; record it as a decision. |
 | Leaving the spec contradictory after a new fact | Recompute the cascade — rewrite every dependent decision/REQ with a "substitui a decisão anterior" trace. |
 | Persisting an answer that contradicts a settled decision | Check each answer against the decision log first; surface the tension before writing it. |
+| Leaving the repo chain as prose in a multi-repo feature | Topology is the FIRST step: fill `## Repos envolvidos` (tag/slug/papel/branch/clonado + `Cadeia:`) and tag every REQ `(repo: <tag>)`, so the plan inherits it instead of re-deriving. |

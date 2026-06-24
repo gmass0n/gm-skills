@@ -46,6 +46,23 @@ The HOW, in technical terms, satisfying the spec. Keep it anchored and traceable
 - **Carry forward the spec's decision log.** The "Decisões e restrições da entrevista" from the spec are constraints here, not things to re-derive. If the spec said "SSE, not WebSocket", the design builds SSE.
 - Cover: solution overview, components and where they live, the end-to-end flow, key trade-offs, and the files the change will touch.
 
+### Multi-repo features — inherit the map, freeze the contract
+
+When a feature crosses repositories, the spec already emitted what you need — **inherit it, don't rediscover it**:
+- A `## Repos envolvidos` table (tag/slug/role/base branch/cloned?) — the registry every downstream field reads.
+- A `Cadeia:` describing the data flow across repos (e.g. `locations-api → customer-api → BFF → portal`).
+- A REQ→repo map saying which repo each requirement lands in.
+
+The plan carries these forward: each task's `Repo:` comes from the REQ→repo map, each Lote-0 task's base/title comes from the registry. You never re-decide which repo a thing lives in.
+
+The new design artifact you do own is the **interface contract that ties the chain together** (next section). Single-repo features have no chain — they skip all of this; `Repo:` is trivial and the contract block is omitted.
+
+#### `## Contrato de interface entre repos` — freeze the shape that crosses the chain
+
+A multi-repo feature is coupled by the **data that travels the chain**, not by files (tasks in different repos never share a file). The real coupling is the *shape* — the field name and type of every datum that one repo produces and the next consumes (e.g. `latitude: number|null`, `longitude: number|null` on the address). That axis is invisible to the file matrix, so you make it explicit.
+
+This block **freezes that shape**: for each datum crossing the chain, its name + type, who produces it and who consumes it. It is **mandatory when multi-repo**. It's also what unlocks the parallelism: once the contract is frozen, each repo **mocks against it** and implements independently — nobody needs another repo live to make progress. The contract is the seam; the mock is how each side works alone. Omit this block entirely when the feature touches a single repo.
+
 ## The Tasks section — where the intelligence lives
 
 Break the work into **atomic tasks**. Each task has two parts: stable **metadata** that downstream phases parse mechanically, and an ordered list of **Steps** that the executor follows literally. Follow `templates/plan.template.md` for the exact shape:
@@ -53,6 +70,7 @@ Break the work into **atomic tasks**. Each task has two parts: stable **metadata
 ```
 ### T-3  [!]
 - Origem: REQ-1, REQ-2          # which requirements this task serves (traceability)
+- Repo: BFF                     # repo TAG from the spec's REQ→repo map (multi-repo only; trivial/omitted single-repo)
 - Depende de: T-1               # dependency graph edge (or "—")
 - Arquivos: src/.../seru-notification.adapter.ts, src/.../tests/...spec.ts
 - Verificação: teste `should emit order.status on change` cobre o critério de REQ-1
@@ -63,6 +81,8 @@ Break the work into **atomic tasks**. Each task has two parts: stable **metadata
 - [ ] **Step 3 (REFACTOR):** limpar; rodar → verde
 - [ ] **Step 4 (COMMIT):** `feat(...): ...`
 ```
+
+- **`Repo:` is the repo TAG** (`LOC`, `BFF`, …) the task lands in, **derived from the spec's REQ→repo map** — the plan inherits it, it doesn't decide it. `sdd:implement` reads `Repo:` to pick which repo's worktree to run the task in. When the feature touches a single repo, `Repo:` is trivial and may be omitted; the field only earns its keep cross-repo.
 
 - **`T-<n>` IDs are stable** — they're how `sdd:implement` targets a single task (`sdd:implement T-3`) and how the matrix traces coverage. Never renumber.
 - **`Verificação` names the test**, and that test must cover an acceptance criterion from the spec. This is the link that makes "everything is tested" mechanical rather than hopeful.
@@ -83,9 +103,11 @@ Doing the analysis once, here, and caching it as Steps is also the token win: th
 A task has two independent properties. Keeping them separate is what makes the plan honest:
 
 - **`[!]` criticality** — should this run alone, with its own review, because it's risky (touches business rules, security, a migration, a shared kernel)? This is about *review granularity*. You mark it: heuristically (auto-flag the risky kinds) and the user can override in the plan.
-- **`[P]` parallelizability** — *computed, not declared.* A task is `[P]` only if its `Arquivos` set does not intersect any other task's in the same wave **and** none of its files are in the "hot list" — the shared-DI files every slice touches here (`*.module.ts`, `env.schema.ts`, domain contracts). You derive `[P]` from the file matrix; you don't let a task claim it.
+- **`[P]` parallelizability** — *computed, not declared.* `[P]` runs on **two orthogonal axes**, and a task is parallelizable only if it clears both:
+  - **File collision (intra-repo)** — the axis that always applies. A task fails it if its `Arquivos` set intersects another task's in the same wave, **or** any of its files are in the "hot list" — the shared-DI files every slice touches in a repo (`*.module.ts`, `env.schema.ts`, domain contracts). Same-repo tasks that touch the same file can't run in parallel. This is the only axis single-repo features have.
+  - **Contract barrier (cross-repo)** — the axis multi-repo adds. The chain *produces → transforms → consumes* a datum, so a consumer task and its producer task are coupled **even though they live in different repos and share no file**. Here the file matrix says "parallel" by accident (different repos never collide on a file) and is wrong: the truth is the contract, not the file. The rule: tasks in different repos are `[P]` **to implement** if the `## Contrato de interface entre repos` is frozen — each side mocks against the frozen shape and needs no other repo live. If the contract is **not** frozen, they are serial. But implementing in parallel is not the same as merging in any order: the consumer must not merge before the producer exposes the contract. **Parallel to implement ≠ ordered to merge.** Encode that merge order as a `Depende de:` edge (consumer depends on producer) even when the two are `[P]`.
 
-Why computed: a self-declared `[P]` is a lie waiting to happen — two "independent" tasks that both edit `notification.module.ts` will collide. The file matrix is the truth. In this coupled brownfield, genuinely parallel tasks are rare, and that's fine — serial is the default downstream anyway.
+Why computed: a self-declared `[P]` is a lie waiting to happen — two same-repo "independent" tasks that both edit `notification.module.ts` collide, and a cross-repo consumer that "looks parallel" by file but races its producer's contract collides at merge. The file matrix is the truth for the intra-repo axis; the frozen contract is the truth for the cross-repo axis. In this coupled brownfield, genuinely parallel tasks are rare, and that's fine — serial is the default downstream anyway.
 
 ### Pre-compute the batches
 
@@ -95,6 +117,16 @@ From the dependency graph and the two axes, group tasks into `L-<n>` batches:
 - Everything else → sequential.
 
 Assign each task its `Lote: L-<n>`. The implementer uses these; it doesn't recompute them.
+
+**Multi-repo opens with `Lote 0` — the scaffold batch.** Before any feature work, a cross-repo feature needs each repo checked out, branched, and PR-opened so the chain has somewhere to land. So emit **one deterministic task per repo** in the registry, all in `L-0`:
+
+1. Clone the repo if it's absent (the registry's `clonado?` column says which).
+2. Create a git **worktree** + branch off **that repo's base** — bases can differ per repo (some `master`, some `develop`); read each from the registry, never assume one base.
+3. Commit the spec scaffold (the `docs/specs/<feature>/` artifacts) into the branch.
+4. Push.
+5. Open a **draft PR** — base and title come from the registry, not invented here.
+
+`L-0` is fully determined by the `## Repos envolvidos` registry — title, base, and repo are all reads, no judgment. The PR tooling is the executor's detail (`gh`, an MCP, whatever the repo uses) — don't hard-code one. Single-repo features have no `L-0`.
 
 ## The coverage matrix — the spine of the proof chain
 
@@ -112,13 +144,14 @@ The user's strongest requirement: *the flow proves everything is built and teste
 
 ## /analyze — the consistency loop before finishing
 
-Coverage (the matrix) proves every requirement has a task. It does **not** prove the tasks are *consistent* with the spec and the project's rules. `/analyze` is that second check — and it's deliberately lean. Three list-checks, using artifacts you already have:
+Coverage (the matrix) proves every requirement has a task. It does **not** prove the tasks are *consistent* with the spec and the project's rules. `/analyze` is that second check — and it's deliberately lean. List-checks, using artifacts you already have:
 
 1. Every REQ-ID referenced in a task's `Origem:` actually exists in the spec (no phantom requirements).
 2. Every REQ-ID in the spec appears in the matrix (this is the coverage check, restated).
 3. **No design decision contradicts an "Invariante enforced" from `context.md`.** Example: a task proposes `domain/` importing `@nestjs/common` → context.md says eslint-boundaries forbids it → block it: "vai falhar no lint, fora do padrão." This is where the flow stays on-pattern — by reading what the project actually enforces, not a hand-written rulebook.
+4. **(multi-repo only) Cross-repo contract consistency** — each datum in `## Contrato de interface entre repos` appears with the **same name and type** in the task that PRODUCES it and the task that CONSUMES it. Example: producer task emits `latitude: number` but consumer task reads `latitude: number|null` → block it: "shape divergente no contrato, vai quebrar no merge." This catches the divergent shape *in the plan*, not at merge time — the failure mode the contract block exists to prevent. Skip this check entirely when single-repo (no contract block).
 
-This is **not** a heavy semantic analyzer. It's three lookups against existing data.
+This is **not** a heavy semantic analyzer. It's a handful of lookups against existing data.
 
 **Run `/analyze` in a subagent — and loop.** Dispatch a subagent with the spec's REQ-IDs, the plan's matrix/Origem fields, and context.md's enforced invariants; it returns the list of inconsistencies (phantom REQs, uncovered REQs, boundary violations). You stay the orchestrator: you read its verdict and fix the plan, you don't run the checks in your own context. Then **loop** — after you fix the design/tasks, dispatch a *fresh* `/analyze` subagent to re-verify against the corrected plan. Repeat until a run comes back clean. A single pass can miss an inconsistency introduced *by* the fix; the loop is what guarantees convergence.
 
@@ -154,6 +187,9 @@ When the matrix is complete (every REQ covered) and `/analyze` is clean (zero `[
 | A task with no test in `Verificação` | Every task names the test that proves its requirement. No test → it's not in the proof chain. |
 | A REQ with no task in the matrix | The plan FAILS. List the uncovered REQs and stop — don't proceed half-covered. |
 | Declaring `[P]` by hand | Compute it from `Arquivos` intersection + the hot-list. A self-declared `[P]` collides at merge time. |
+| Calling cross-repo tasks `[P]` because they share no file | File isolation is only the intra-repo axis. Cross-repo, the contract is the coupling: `[P]` only if it's frozen, and still `Depende de:` producer for merge order. Parallel to implement ≠ ordered to merge. |
+| Re-deciding which repo a task lands in | `Repo:` is inherited from the spec's REQ→repo map. The plan carries it; it doesn't choose it. |
+| Skipping `L-0` on a multi-repo feature | Every multi-repo feature opens with one scaffold task per repo (clone → worktree+branch off the registry's base → push → draft PR). The chain needs somewhere to land. |
 | Treating `[!]` and `[P]` as the same flag | `[!]` is review granularity; `[P]` is file isolation. Orthogonal. A task can be critical *and* parallelizable, or neither. |
 | Running a heavy semantic analysis for `/analyze` | Three list-checks against the spec, the matrix, and context.md's enforced invariants. Lean by design. |
 | Auto-adding every concern as a task | Scoped + opt-in only: concerns whose anchor touches the feature's files, presented for the user to accept. |

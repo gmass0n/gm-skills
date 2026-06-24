@@ -21,6 +21,27 @@ generated: <data>
 ## Contexto e objetivo
 <por que existe, que problema resolve. 2-3 frases. ZERO código.>
 
+## Repos envolvidos
+<APENAS multi-repo (feature toca >1 repo). Em single-repo OMITA esta seção inteira
+ e NÃO tague os REQs — a spec fica byte-idêntica ao formato single-repo.
+ Tabela parseável: o plan a lê direto e herda a topologia (não re-descobre raiz/slug/branch/clone).
+ Uma linha por repo, ordenadas pela cadeia. Colunas:
+   tag         = handle curto (LOC/CUS/BFF/POR) — usado p/ taguear REQ e, depois, task.
+   repo (slug) = slug real do repo (pos-facil-api etc.), não nome amigável.
+   papel       = produz / transforma / consome (da pergunta de fronteira:
+                 produz=cunha o dado, transforma=reshape/encaminha, consome=lê).
+   branch base = master / develop (de onde a branch da feature deste repo sai).
+   clonado?    = sim / não / <onde> (está clonado localmente e onde — p/ o plan não re-descobrir).
+ Célula que você não consegue fixar = ambiguidade → [NEEDS CLARIFICATION], mesmo loop.>
+| tag | repo (slug) | papel | branch base | clonado? |
+|-----|-------------|-------|-------------|----------|
+| LOC | locations-api | produz | master | sim |
+| CUS | pos-facil-api | transforma | master | sim |
+| BFF | seru-delivery-api | transforma | develop | sim (este repo) |
+| POR | seru-delivery-portal | consome | develop | não |
+
+Cadeia: LOC → CUS → BFF → POR
+
 ## User stories
 - US-1: Como <persona>, quero <capacidade> para <benefício>.
 - US-2: ...
@@ -29,10 +50,13 @@ generated: <data>
 <EARS = Easy Approach to Requirements Syntax. Cada REQ é observável e testável.
  Padrões: WHEN <gatilho>, THE sistema SHALL <ação>. / WHILE <estado>, THE sistema
  SHALL <ação>. / IF <condição>, THEN THE sistema SHALL <ação>. REQ-IDs são estáveis
- e sequenciais — uma vez atribuído, um número não é reusado.>
-- REQ-1: WHEN um pedido muda de status, THE sistema SHALL emitir uma notificação ao operador conectado em até 2s.
-- REQ-2: WHILE o operador está desconectado, THE sistema SHALL descartar notificações (sem backlog).
-- REQ-3: IF a conexão SSE cair, THEN o cliente SHALL reconectar automaticamente.
+ e sequenciais — uma vez atribuído, um número não é reusado.
+ Multi-repo: cada REQ termina com (repo: <tag>) — o plan deriva o campo Repo: da task
+ deste mapa, não chuta. Um REQ que cruza 2 repos vira 2 REQs (um por repo), não 1 com 2 tags.
+ Single-repo: sem tag.>
+- REQ-1: WHEN um pedido muda de status, THE sistema SHALL emitir uma notificação ao operador conectado em até 2s. (repo: BFF)
+- REQ-2: WHILE o operador está desconectado, THE sistema SHALL descartar notificações (sem backlog). (repo: BFF)
+- REQ-3: IF a conexão SSE cair, THEN o cliente SHALL reconectar automaticamente. (repo: POR)
 
 ## Critérios de aceite (por requisito)
 <um bloco por REQ — é o que vira o teste no plan. Concreto e verificável.>
@@ -63,5 +87,6 @@ generated: <data>
 - **Requisito é observável, não implementação.** "THE sistema SHALL emitir evento" (observável) — não "o SeruNotificationAdapter assina o stream" (isso é design, vai pro plan).
 - **Todo REQ tem critério de aceite mensurável.** Sem número/condição verificável → vira `[NEEDS CLARIFICATION]`, não passa.
 - **Decisões ≠ Clarificações.** Decisões = o que foi FECHADO no grill (o plan herda). Clarificações = o que está ABERTO (o plan espera). As duas seções são metades opostas do handoff.
+- **Multi-repo: topologia é artefato, não prosa.** `## Repos envolvidos` (tabela + `Cadeia:`) e o `(repo: <tag>)` em cada REQ nascem AQUI, na spec — o plan herda a topologia e deriva o `Repo:` de cada task do mapa REQ→repo, sem re-descobrir raiz/slug/branch/clone. Single-repo: seção omitida e REQs sem tag (spec byte-idêntica ao formato single-repo).
 - **Persistência incremental das clarificações.** O marcador entra nesta seção no instante em que a ambiguidade surge — não no fim. É o que torna a spec resumível se a sessão morrer.
 - **`status: ready` é um gate real.** Só vira `ready` com "Clarificações pendentes" vazia. `sdd:plan` lê isso e o frontmatter — spec `draft` ou com marcador aberto é recusada.

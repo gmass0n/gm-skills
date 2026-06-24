@@ -48,12 +48,27 @@ generated: <data>
 <as escolhas técnicas e por quê. Herda as "Decisões e restrições" da spec.>
 - SSE em vez de WebSocket: unidirecional basta (REQ-1), menos infra. (decisão D-1 da spec)
 
+## Contrato de interface entre repos
+
+<SÓ multi-repo. Omitir inteiro quando a feature toca um único repo.
+ CONGELA o shape do dado que atravessa a cadeia (`Cadeia:` da spec): nome + tipo de cada campo,
+ quem PRODUZ e quem CONSOME. É o que destrava o paralelismo — cada repo mocka contra este shape
+ e implementa sozinho, sem precisar do outro NO AR. Herda `## Repos envolvidos` e a `Cadeia:` da spec.>
+
+| Campo | Tipo | Produz | Consome |
+|-----------|---------------|--------|------------|
+| latitude  | number\|null  | LOC    | BFF, portal |
+| longitude | number\|null  | LOC    | BFF, portal |
+
 ## Tasks
 
 <cada task é atômica. T-<n> estável. [!] = crítica (lote solo). [P] NÃO se declara aqui —
- é computado da interseção de Arquivos; o plan registra o resultado no campo Lote.
+ é computado em DOIS eixos: colisão de arquivo (intra-repo) + barreira de contrato (cross-repo).
+ O plan registra o resultado no campo Lote.
 
- Os campos de metadados (Origem/Depende de/Arquivos/Verificação/Lote) são o CONTRATO parseável.
+ Os campos de metadados (Origem/Repo/Depende de/Arquivos/Verificação/Lote) são o CONTRATO parseável.
+ `Repo:` = TAG do repo (LOC/BFF...), herdada do mapa REQ→repo da spec; trivial/omitido single-repo.
+ O `sdd:implement` lê `Repo:` para escolher o worktree onde a task roda.
  Os Steps abaixo deles são o ROTEIRO de execução: o subagente do implement só os segue, não decide.
  Cada task começa com um teste failing e termina num commit atômico — TDD, sem exceção.
 
@@ -97,7 +112,18 @@ generated: <data>
 
 ## Lotes
 
-<pré-computados do grafo de dependência + dos dois eixos. O implement usa, não recomputa.>
+<pré-computados do grafo de dependência + dos dois eixos (colisão de arquivo intra-repo +
+ barreira de contrato cross-repo). O implement usa, não recomputa.
+
+ MULTI-REPO abre com L-0: 1 task/repo do registro `## Repos envolvidos` — clonar se ausente →
+ worktree + branch da base do repo (bases diferem: uns master, uns develop) → commit scaffold das
+ specs → push → PR DRAFT. Base e título saem do registro; ferramenta de PR é detalhe do executor.
+ Single-repo NÃO tem L-0.
+
+ Cross-repo: tasks de repos diferentes são [P] para IMPLEMENTAR se o contrato está congelado
+ (cada uma mocka contra o shape), MAS o consumidor tem `Depende de:` o produtor para ordem de MERGE.
+ Paralelo para implementar ≠ ordem para mergear.>
+- **L-0** (scaffold multi-repo): T-0-LOC, T-0-BFF — clone/worktree/branch/push/PR draft por repo
 - **L-1** (serial): T-1
 - **L-2** (solo, [!]): T-2 — crítica, roda e valida sozinha
 - **L-3** (paralelo): T-4, T-5 — Arquivos sem interseção, nenhuma na lista quente
@@ -133,8 +159,11 @@ generated: <data>
 - **Trecho de código só quando não-óbvio.** Sempre checkbox + arquivo + comando. Bloco de código embutido apenas para edits não-triviais (assinatura nova, spread condicional, SQL); edit trivial vira uma linha de descrição.
 - **Task atômica, ID estável.** `T-<n>` nunca renumerado — é o alvo de `sdd:implement T-n` e a chave da matriz.
 - **`Verificação` nomeia o teste** que cobre um critério de aceite da spec. Sem teste nomeado, a task está fora da cadeia de provas.
-- **`[!]` é marcado; `[P]`/`Lote` é computado.** Criticidade você decide (heurística + override do dev). Paralelizabilidade vem da interseção de `Arquivos` + lista quente (`*.module.ts`, `env.schema.ts`, contratos) — o resultado vira o `Lote`.
+- **`[!]` é marcado; `[P]`/`Lote` é computado em dois eixos.** Criticidade você decide (heurística + override do dev). Paralelizabilidade vem de DOIS eixos ortogonais: **colisão de arquivo (intra-repo)** — interseção de `Arquivos` + lista quente (`*.module.ts`, `env.schema.ts`, contratos); e **barreira de contrato (cross-repo)** — tasks de repos diferentes são `[P]` para implementar SE o `## Contrato de interface entre repos` está congelado, senão serial. Single-repo só tem o eixo de arquivo. Cross-repo `[P]` ainda carrega `Depende de:` o produtor (ordem de merge ≠ ordem de implementação). O resultado vira o `Lote`.
+- **`Repo:` é herdado, não decidido.** Vem do mapa REQ→repo da spec. TAG do repo (LOC/BFF...). Single-repo: trivial/omitido. `sdd:implement` usa para escolher o worktree.
+- **Contrato cross-repo é obrigatório multi-repo.** O bloco `## Contrato de interface entre repos` congela nome+tipo de cada campo que atravessa a cadeia. Omitido inteiro single-repo.
+- **`L-0` abre toda feature multi-repo.** 1 task/repo do registro: clone se ausente → worktree+branch da base do repo → commit scaffold → push → PR draft. Determinístico (base/título do registro). Single-repo não tem.
 - **Matriz completa é gate.** Todo REQ da spec → linha na matriz com task + teste. Faltou um → plan FALHA, lista o gap, para.
-- **`/analyze` loop bloqueante.** Inconsistência achada → `[ANALYSIS: ...]` persistido em "Análise pendente" na hora. `status: ready` só com a seção vazia. `sdd:implement` lê o status e a seção — plan `draft` ou com `[ANALYSIS]` aberto é recusado.
+- **`/analyze` loop bloqueante.** Checa: REQ fantasma, REQ não coberto, contradição com invariante enforced, e (multi-repo) **consistência de contrato cross-repo** — o campo do `## Contrato de interface entre repos` aparece com MESMO nome+tipo na task que PRODUZ e na que CONSOME. Inconsistência achada → `[ANALYSIS: ...]` persistido em "Análise pendente" na hora. `status: ready` só com a seção vazia. `sdd:implement` lê o status e a seção — plan `draft` ou com `[ANALYSIS]` aberto é recusado.
 - **Concerns só por escopo e opt-in.** Filtra por âncora nos `Arquivos` da feature, apresenta ao dev, só entra se aceito. Nunca auto-injeta, nunca puxa débito global.
 - **Cada decisão de Design → REQ-id.** Decisão órfã (sem REQ) é scope creep.

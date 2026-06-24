@@ -22,17 +22,31 @@ This phase reads `plan.md` and the codebase map; it writes code, tests, commits,
 - **No `plan.md`** → refuse: "Não há plano para `<feature>`. Rode `sdd:plan <feature>` primeiro."
 - **`plan.md` has open `[ANALYSIS]` markers or `status: draft`** → refuse and point back to `sdd:plan`. This is the safety net for a plan abandoned mid-`/analyze`; normally it never fires.
 - **Invoked with no plan at all** (user wants to just code) → don't silently comply. Say: "Sem plano não há matriz de cobertura — não consigo provar que tudo foi feito e testado. Confirma que quer modo vibe (sem garantia)?" Let the user choose the downgrade consciously rather than losing the guarantee silently.
+- **Repo selector on a plan with no registry** (`sdd:implement <feature> <repo>` but the plan has no repo registry / `Repo:` tags) → refuse: "`<feature>` é single-repo — não há registro de repos para filtrar. Rode `sdd:implement <feature>` (ou `T-n`/`L-n`)." Conversely, a multi-repo plan whose selected repo has **no `Lote 0` worktree yet** → stop and point back to `sdd:plan`/`Lote 0` instead of creating it here.
 
 **Inherit the language** from `plan.md`'s frontmatter (`lang:`). All your narration, commit messages follow the repo's git convention (English, per the project), but your communication with the user stays in the plan's language.
 
-## Targeting — whole feature, one task, or one batch
+## Targeting — whole feature, one task, one batch, or one repo
 
-`sdd:implement` accepts an optional target:
-- `sdd:implement <feature>` — work the whole plan, batch by batch.
-- `sdd:implement T-3` — just task T-3. **Verify its preconditions** (its `Depende de:` tasks are already committed) but do **not** silently re-run dependencies — if a dependency isn't done, say so and stop.
-- `sdd:implement L-2` — just batch L-2.
+`sdd:implement <feature>` is the base; the optional **second argument** narrows the scope. There are **three modes**, and the parser distinguishes them by the shape of that second argument:
+
+- `sdd:implement <feature>` (no second arg) — work the whole plan, batch by batch.
+- `sdd:implement <feature> T-3` — second arg matches `T<n>` → just **task** T-3. **Verify its preconditions** (its `Depende de:` tasks are already committed) but do **not** silently re-run dependencies — if a dependency isn't done, say so and stop.
+- `sdd:implement <feature> L-2` — second arg matches `L<n>` → just **batch** L-2.
+- `sdd:implement <feature> <repo-tag-or-slug>` — second arg matches neither `T<n>` nor `L<n>` → treat it as a **repo selector** (multi-repo plans only; see below).
+
+**Parser order (deterministic):** `<feature>` is always required first. Then the second arg, if present, is classified: `^T\d` → task, `^L\d` → batch, otherwise → repo tag/slug. If the repo branch is reached but the token resolves to no repo in the spec's registry, **error clearly** — don't silently fall through to "whole feature". Example: `Repo "FOO" não está no registro de repos da spec. Tags disponíveis: LOC, CUS, BFF, POR.`
 
 Stable task/batch IDs come from the plan; that's why they exist.
+
+### The repo selector (multi-repo plans)
+
+When the plan carries a `## Contrato de interface entre repos` block and tasks tagged `Repo:`, the feature spans several repositories in a chain (e.g. `operational-map`: locations-api → customer-api → BFF → portal). The model is **opção 1 — the machine understands the repos, the human drives the terminals (one per repo).** This is *not* automatic orchestration of N pipelines: each `sdd:implement <feature> <repo>` invocation works exactly one repo — the one the selector names — inside that repo's own worktree, and the human runs one such invocation per terminal/repo.
+
+- **`<feature>` stays mandatory** before the repo token: the plan is needed to know the tasks *and* the repo registry (the selector only *filters* an existing plan, it never discovers repos).
+- **Resolution against the registry.** The spec emits a repo registry (a table: tag / slug / role / base branch). The selector accepts either the **short tag** (`LOC`, `CUS`, `BFF`, `POR`) **or** the **slug** (`locations-api`, `customer-api`, …); the slug must match the `repo (slug)` column of that table. Resolve tag↔slug both ways. Unknown token → the clear error above.
+- **Semantics — run all of that repo's tasks, in batch order.** Select every task whose `Repo:` equals the resolved repo, then run them **batch by batch (L-1 → L-2 → …)**, honoring each task's intra-repo `Depende de:`, and **stop at the first red test that won't pass** — same serial discipline as the whole-feature run, just filtered to one repo.
+- **Single-repo is unchanged.** A plan with no `Repo:` tags has no registry; the repo selector simply doesn't apply, and `sdd:implement <feature>` behaves exactly as before. The repo mode only "exists" when the plan is multi-repo.
 
 ## Execution model — serial by default, parallel only when proven safe
 
@@ -48,9 +62,21 @@ When you do run a parallel batch, the mechanics matter (they're why most repos c
 - After merging the batch, **run the full suite on the integrated branch** — a silent auto-merge of a shared module only surfaces here.
 - **Remove the worktree** when done. Cleanup is not optional; the litter proves it won't happen on its own.
 
+### Cross-repo worktrees (multi-repo plans) — reuse the same machinery, one worktree per repo
+
+The worktree+symlink+rebase+cleanup machinery above is **intra-repo** (one repo, parallel tasks). A multi-repo plan reuses the *same* primitives at a coarser grain — **one worktree per repo**, not per task — and that worktree is created up front by the plan's `Lote 0` (worktree + branch + PR per repo, off each repo's base branch from the registry), not by this phase. This phase **operates inside the worktree the registry/Lote 0 already established for the selected repo**; it does not invent new worktrees for cross-repo.
+
+What changes versus the intra-repo case, and only this:
+- **The repo worktree is keyed by the registry**, not by a task. Its path is the repo's worktree root recorded in the spec's registry / created in `Lote 0`. The repo selector (and a task's `Repo:` tag) resolves to that root.
+- **Every git, test, and commit for a task runs in that task's repo worktree** — operate on the worktree root explicitly (the `git -C <repo-worktree>` principle; don't hard-code a flag, the point is "act on *that* worktree, never the orchestrator's cwd"). Each invocation works the repo of its own terminal/context; it never reaches into a sibling repo's worktree.
+- **`node_modules` symlink, scoped coverage, and cleanup are per repo**, exactly as above — each repo worktree gets its own symlink from *its* repo root, its own coverage threshold from *its* `testing.md`, and its own teardown.
+- **No cross-repo merge here.** Intra-repo parallel batches still rebase-merge within a repo as above; across repos there is nothing to merge — each repo lands on its own branch/PR (the `## Contrato de interface entre repos` block is what keeps the branches compatible). Cross-repo integration is proven by the closing gate's per-repo matrix, not by a merge.
+
 ## The task loop — strict TDD, one subagent each
 
 For each task, dispatch one fresh subagent. Give it a **task briefing (~500 tokens)** — not the whole codebase map. The briefing is the task's own block from the plan verbatim: its `Steps` (with the embedded trechos), `Arquivos`, and `Verificação`, **plus `docs/codebase/conventions/testing.md`** so the tests it writes follow the project's enforced test contract (location, naming, the per-suite coverage checklist, commands, threshold). That set is self-contained and execution-ready — the plan pre-digested the *how*, testing.md fixes the *test shape*, so the executor needs no map and no analysis. The subagent's job is to *carry out the Steps in order*, not to figure out what to do. This keeps each subagent lean and on-target.
+
+**Read the task's `Repo:` tag and run in that repo's worktree.** On a multi-repo plan, each task carries a `Repo:` tag; resolve it against the spec's registry to the repo's worktree root (established by `Lote 0`) and put that root in the briefing, so the subagent runs *its* Steps, tests, and commit against that worktree (`git -C <repo-worktree>`), pulling the convention from *that* repo's `testing.md`. A task with **no `Repo:` tag** (single-repo plan) runs in the cwd worktree exactly as today — the tag is the only difference. Each invocation handles the repo of its own context; the orchestrator never reaches into another repo's worktree to "also" run its tasks.
 
 Each subagent follows the plan's per-task `Steps`, which are already laid out as a strict **test-first TDD loop, no exceptions**:
 
@@ -107,7 +133,19 @@ abertas: —                          # decisões/bloqueios pendentes
 cobertura: REQ-1 ✅  REQ-2 ✅  REQ-3 ⏳
 ```
 
-**Rewrite it the instant a task finishes — after the task's commit, before dispatching the next subagent.** This is non-negotiable: `state.md` must always reflect the *real* committed state, so if the session dies mid-plan, the next run reads `último`/`próximo` and resumes from the exact task that was in flight — no re-doing committed work, no skipping an unstarted one. A `state.md` updated only at the end is useless for the one case it exists for.
+**Multi-repo: track progress per repo/tag.** When the plan is multi-repo, `state.md` records a line per repo (keyed by tag), each with its own branch and last/next cursor — no new persistence machinery, just one more dimension on the same compact cursor. The repo selector and a dead-session resume read the row for the repo they're working:
+
+```markdown
+# state — operational-map
+LOC (locations-api): branch feature/CL-31-loc | último T-2 (a1b2c3d) | próximo T-3
+CUS (customer-api):  branch feature/CL-31-cus | último T-5 (e4f5g6h) | próximo —      ✅ repo green
+BFF (seru-delivery): branch feature/CL-31-bff | último —             | próximo T-7
+POR (portal):        branch feature/CL-31-por | último —             | próximo T-9
+abertas: —
+cobertura: REQ-1 ✅  REQ-2 ✅  REQ-3 ⏳ (BFF)
+```
+
+**Rewrite it the instant a task finishes — after the task's commit, before dispatching the next subagent.** This is non-negotiable: `state.md` must always reflect the *real* committed state, so if the session dies mid-plan, the next run reads `último`/`próximo` (for the relevant repo row, when multi-repo) and resumes from the exact task that was in flight — no re-doing committed work, no skipping an unstarted one. A `state.md` updated only at the end is useless for the one case it exists for.
 
 It's a cursor, not a journal: where am I, what's next, which requirements are green. The `cobertura:` line mirrors the plan's matrix and feeds the closing gate. Detailed history lives in git, not here. On a parallel batch, only you (the orchestrator) touch `state.md` — subagents never write it, or they'd race.
 
@@ -117,19 +155,24 @@ This is the payoff of the whole workflow. When the tasks are done, **dispatch a 
 
 ```
 for each REQ in the plan's matrix:
-    ├─ its task(s) committed?           (check git)
-    ├─ its named test exists and is GREEN?   (run it)
+    ├─ its task(s) committed?           (check git — in the task's repo worktree when multi-repo)
+    ├─ its named test exists and is GREEN?   (run it in that repo's worktree)
     └─ ✅ only if both hold
 
-then on the integrated branch:
+then on the integrated branch (per repo when multi-repo — each in its own worktree):
     ├─ full suite passes
     ├─ test count did NOT regress vs base — no test silently deleted or skipped to go green
-    ├─ coverage of the new slice didn't regress (threshold from testing.md)
+    ├─ coverage of the new slice didn't regress (threshold from that repo's testing.md)
     ├─ lint/typecheck/hooks pass (the project's enforced invariants)
     └─ collect every // SPEC_DEVIATION marker in the slice → list them in the report
+
+# multi-repo only: feature is done ⟺ every repo in the registry passes the above;
+# a single-repo target reports just its own repo green, others may stay open.
 ```
 
 If any REQ lacks a committed task with a passing test, **do not declare done.** Report exactly which requirements are still open and what's missing. This is the difference from a static coverage check: here every requirement is proven by a *passing test on the real branch*, not just a row in a table.
+
+**Multi-repo: "done" is repo-relative when a repo was the target; global done needs every repo green.** When the run was `sdd:implement <feature> <repo>`, the closing gate proves *that repo's* slice of the matrix (its tasks committed, its tests green on its branch in its worktree) and reports the repo as done — the other repos may still be open, and that's expected (one terminal per repo). The **feature** is done only when every repo in the registry is green: the closing gate walks the matrix **per repo**, each row resolved in its own worktree (`git -C <repo-worktree>`, tests via *that* repo's `testing.md`), and won't declare the feature complete while any repo's slice has an open REQ. Cross-repo interface compatibility is checked against the plan's `## Contrato de interface entre repos` block — a repo green in isolation but diverging from the contract is reported as a blocker, not a pass.
 
 The **test-count check** is mechanical and cheap: it catches the one cheat a green suite hides — a test removed or `.skip`-ed so the bar is lower than it was. The gate compares the slice's test count against the base branch; a drop with no committed task that legitimately removed a test is a failure, not a pass. Coverage threshold and run commands come from `testing.md`, never invented.
 
@@ -167,3 +210,6 @@ When the gate is fully green, update `state.md` (`próximo: —`, all REQs ✅) 
 | Updating state.md only at the end | Rewrite it after every task's commit. It exists for the dead-session case; stale = useless. |
 | state.md growing every session | Rewrite it compact each time. It's a cursor (branch, last/next, coverage), not a log. |
 | Re-running dependencies when targeting a single task | Verify the dependency is committed; if not, stop and say so. Don't silently rebuild it. |
+| Running a task in the orchestrator's cwd on a multi-repo plan | Resolve the task's `Repo:` tag to its worktree (from the registry / `Lote 0`) and run there (`git -C <repo-worktree>`). The cwd is only right for untagged single-repo tasks. |
+| Treating the repo selector as "build all 4 repos for me" | One `sdd:implement <feature> <repo>` works one repo, in its terminal. Opção 1: the machine knows the repos, the human drives one terminal per repo. Not auto-orchestration of N pipelines. |
+| Declaring the feature done after one repo goes green | Repo-target done is repo-relative. Feature done needs every repo in the registry green, each proven in its own worktree, and matching the interface contract. |
