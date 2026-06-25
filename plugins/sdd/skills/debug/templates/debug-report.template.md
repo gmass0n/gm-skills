@@ -1,6 +1,6 @@
-# Template: `debug-<slug>.md`
+# Template: `report.md` (na pasta da sessão)
 
-O cursor leve de uma caça a bug. Vive em `docs/specs/<feature>/debug-<slug>.md` quando o bug está numa feature especificada (herda o contexto da spec), ou em `docs/debug/<slug>.md` quando não está. Não é um contrato eterno como `spec.md`/`plan.md` — é **andaime descartável**: serve para resumir a caça se a sessão morrer e para guardar o manifesto de limpeza. O registro durável de verdade é o teste de regressão no git; este `.md` pode ser arquivado ou apagado depois do fix.
+O cursor leve de uma caça a bug. Vive na **pasta da sessão** `docs/debug/<slug>/report.md`, com o `session.jsonl` de captura ao lado (mesma pasta — tudo da sessão centralizado). Quando o bug está numa feature especificada, pode viver em `docs/specs/<feature>/debug-<slug>.md` para herdar o contexto da spec; nesse caso o `session.jsonl` ainda fica em `docs/debug/<slug>/`. Não é um contrato eterno como `spec.md`/`plan.md` — é **andaime descartável**: serve para resumir a caça se a sessão morrer e para guardar o manifesto de limpeza. O registro durável de verdade é o teste de regressão no git; este `.md` pode ser arquivado ou apagado depois do fix.
 
 ## Idioma
 
@@ -15,6 +15,7 @@ lang: pt | en
 status: investigando | fix-aplicado | resolvido   # fix-aplicado = GREEN do fix-executor; resolvido só com closing-gate verde E confirmacao-humana
 debug-tag: DEBUG-a4f2                  # hash único da sessão — o manifesto de limpeza
 feature: <feature ou ->               # link à spec se houver; "-" se bug avulso
+repos: [<repo-principal>]             # repos tocados na sessão; >1 só em bug multi-repo (cada um precisa de grep-zero no F8)
 confirmacao-humana: <- | sim (data)>  # carimbo do AskUserQuestion final; sem ele, status nunca é "resolvido"
 generated: <data>
 ---
@@ -27,7 +28,8 @@ generated: <data>
 
 ## Repro
 <como dispara o bug, minimizado ao menor cenário que ainda falha. 1-3 linhas.
- Marque quem dispara: [agente] roteirizável (teste/curl/navigate) ou [humano] manual (login/estado).>
+ Marque quem dispara: [agente] roteirizável (teste/curl/navigate), [agente-playwright] fluxo
+ backend com auth no browser (curl falha sem token), ou [humano] manual (login/estado).>
 
 ## Hipóteses
 <2-5, cada uma: mecanismo — onde (camada/arquivo) — status + evidência.
@@ -46,10 +48,12 @@ generated: <data>
 
 ## Instrumentação (manifesto de limpeza)
 <tudo que o closing-gate vai remover. Sem isto, instrumentação órfã fica para sempre se a sessão cair.
- Cada sender tem um comentário-âncora `// DEBUG-<hash> (sdd:debug) — remover na limpeza` na linha de cima.>
+ Cada sender tem um comentário-âncora `// DEBUG-<hash> (sdd:debug) — remover na limpeza` na linha de cima.
+ Multi-repo: nomeie o repo de cada sender — o grep-zero roda em cada um.>
 - debug-tag: DEBUG-a4f2
-- senders em: src/.../foo.ts:42, src/.../bar.ts:88
-- server: porta 9999 → docs/debug/<slug>.jsonl  (ou file-write direto, se sem rede)
+- senders em: <repo-A> src/.../foo.ts:42, <repo-B> src/.../bar.ts:88
+- server: porta 9999 → docs/debug/<slug>/session.jsonl  (ou file-write direto, se sem rede)
+- serviço(s) reiniciado(s) para instrumentar: <ex: api (Node 24, node dist/main.js)> — restaurar no F8: sim/não
 
 ## Causa raiz
 <a função/linha real onde o bug nasce + quantos callers compartilham o mesmo bug (do grep da F2).
@@ -67,12 +71,13 @@ generated: <data>
 - Se pulado (escape honesto): "sem teste — <motivo>", registrado como dívida.
 
 ## Closing-gate (veredito — o gate duplo da F8)
-<o closing-gate prova; status só vira "resolvido" com os 6 marcados.>
+<o closing-gate prova; status só vira "resolvido" com todos marcados.>
 - [ ] re-repro = comportamento certo (o MESMO repro da F4, agora correto)
 - [ ] teste de regressão verde
-- [ ] grep-zero `DEBUG-<hash>` no código
+- [ ] grep-zero `DEBUG-<hash>` no código — **em cada repo de `repos:`**
 - [ ] processo do debug server morto
-- [ ] `.jsonl` apagado
+- [ ] `session.jsonl` apagado
+- [ ] serviço(s) do dev reiniciado(s) na F4 restaurado(s) ao estado original
 - [ ] humano confirmou que o sintoma original sumiu (`confirmacao-humana`)
 
 ## Tentativas (só se houve circuit breaker)
@@ -86,4 +91,5 @@ generated: <data>
 - **Sintoma do tipo c precisa de "esperado vs obtido".** Sem erro que grite, o que define o bug é a divergência. Escreva-a explícita.
 - **Causa raiz nomeia callers.** O número de callers que compartilham o bug é o que justifica o fix na função compartilhada em vez de no caller nomeado.
 - **A prova TDD é registro durável.** O `.md` é descartável; o teste no git não. O RED colado prova que o teste foi escrito antes do fix. Se o teste foi pulado, a dívida fica escrita aqui — não some no silêncio.
-- **`status` é um gate real, em dois saltos.** `investigando` → `fix-aplicado` (o fix-executor fechou o GREEN, mas nada ainda confirmou que resolve o sintoma) → `resolvido` (**só** com os 6 checkboxes do closing-gate marcados **e** `confirmacao-humana` preenchida). Pular de `investigando` direto para `resolvido` é exatamente a falha que esta skill existe para impedir.
+- **`status` é um gate real, em dois saltos.** `investigando` → `fix-aplicado` (o fix-executor fechou o GREEN, mas nada ainda confirmou que resolve o sintoma) → `resolvido` (**só** com todos os checkboxes do closing-gate marcados **e** `confirmacao-humana` preenchida). Pular de `investigando` direto para `resolvido` é exatamente a falha que esta skill existe para impedir.
+- **Pasta-por-sessão + multi-repo.** Tudo da sessão mora em `docs/debug/<slug>/` (report + `session.jsonl`), num único repo mesmo quando o bug cruza repos — a captura converge num só `.jsonl`. Se `repos:` tem mais de um, o manifesto nomeia o repo de cada sender e o grep-zero do F8 roda em cada um; qualquer serviço reiniciado para instrumentar volta ao estado original no fechamento.

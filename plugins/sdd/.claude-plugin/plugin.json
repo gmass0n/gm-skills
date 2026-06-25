@@ -1,7 +1,7 @@
 {
   "name": "sdd",
   "description": "Spec-Driven Development workflow: codebase mapping, spec, plan, implement and debug skills that prove every requirement is built and tested. Brownfield-first.",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "author": {
     "name": "Gabriel Masson"
   }

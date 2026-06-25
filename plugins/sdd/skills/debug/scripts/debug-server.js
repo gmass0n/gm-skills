@@ -5,7 +5,8 @@
 // de captura. O agente lê esse arquivo para confrontar evidência de runtime vs hipóteses.
 //
 // Uso:  node debug-server.js [arquivo-de-saida] [porta]
-//   arquivo-de-saida  default docs/debug/session.jsonl
+//   arquivo-de-saida  a skill passa docs/debug/<slug>/session.jsonl (pasta-por-sessão);
+//                     default docs/debug/session.jsonl se omitido. O dir é criado (recursive).
 //   porta             default 9999 (tenta as próximas se ocupada)
 //
 // ponytail: stdlib pura (http+fs), zero deps, zero build. Sobe em background, morre na F8.

@@ -13,7 +13,7 @@ Um bug é um sintoma. A tentação — a do Claude cru, a do dev às 3am — é 
 
 **O eixo rápido-vs-rigor resolve-se assim: o rigor É o atalho.** Hipóteses-primeiro não é lentidão — é o que evita três fixes errados em sequência. Causa raiz não é cerimônia — é o diff menor (uma guarda na função compartilhada é menos código que uma guarda em cada caller). A pressa que funciona é hipótese-primeiro; pular pro fix é a pressa que te paga às 3am.
 
-Esta skill lê o mapa e specs como input, e escreve apenas um report leve sob `docs/specs/<feature>/debug-<slug>.md` ou `docs/debug/<slug>.md` (mais o `.jsonl` efêmero de captura, removido no fim). Nunca toca o mapa.
+Esta skill lê o mapa e specs como input, e escreve apenas um report leve dentro da pasta da sessão `docs/debug/<slug>/report.md` (ou, se o bug está numa feature especificada, `docs/specs/<feature>/debug-<slug>.md`) — junto com o `session.jsonl` efêmero de captura, removido no fim. Nunca toca o mapa.
 
 ## Antes de tudo — ground e idioma
 
@@ -49,6 +49,10 @@ Cada fase consome o que a anterior produziu; você não avança sem isso. **Sem 
 ### F0 — Grounding
 Leia `context.md` (acima), trave o idioma, e veja se o bug cai numa `docs/specs/<feature>/` existente (anote para a F5 — saber o comportamento *esperado* muda o fix). Esta é a única leitura de disco que o orquestrador faz no próprio contexto; todo o resto (source, specs, testing.md) vai por subagente.
 
+**Crie a pasta da sessão agora:** `docs/debug/<slug>/` — tudo da sessão mora aqui (o report `report.md` E a captura `session.jsonl`), centralizado num só lugar. Em multi-repo, **a pasta fica no repo onde a sessão começou**; a captura dos dois repos converge para o mesmo `session.jsonl` (o debug server é um só). Nada de `.md`/`.jsonl` soltos na raiz de `docs/debug/`.
+
+**Multi-repo — grounding no 2º repo (regra inegociável).** Se o bug cruzar para outro repositório (ex.: o frontend chama um backend que vive noutro repo), **antes de instrumentar esse 2º repo faça um mini-F0 nele**: leia o `docs/codebase/context.md` *dele* (as invariantes enforced são outras), e se houver `docs/specs/<feature>/` correspondente, anote o REQ. **Nunca instrumente um repo cujo mapa você não leu** — você pode violar uma invariante invisível no fix, e o gate de lint/typecheck *daquele* repo quebra o build. (Caso real: um bug que nasceu no portal seguiu para a API; a API tinha o próprio `context.md`, `CLAUDE.md` e specs — ignorá-los é instrumentar às cegas.)
+
 ### F1 — Triagem e captura do sintoma
 **Leia a mensagem de erro / stack trace até o fim, ANTES de hipotetizar.** Mensagens de erro frequentemente contêm a solução exata; pular a leitura para teorizar é o erro nº 1. Então:
 
@@ -73,20 +77,25 @@ Leia `context.md` (acima), trave o idioma, e veja se o bug cai numa `docs/specs/
 **Regra anti-pulo (inegociável, sem exceção):** se você está prestes a comissionar um fix-executor e ainda **não tem evidência de runtime que confirme uma hipótese, PARE — você está adivinhando.** O Debug Mode não chuta; coleta. Vá para F3. (As frases-armadilha que sinalizam que você voltou a adivinhar estão em `references/hypothesis-discipline.md` — leia-o quando sentir a tentação do "vou só tentar esse fix rápido".)
 
 ### F3 — Instrumentação dirigida + sobe o debug server (comissionada)
-**O orquestrador comissiona a instrumentação a um subagente — não injeta senders no próprio contexto** (`the orchestrator commissions the instrumentation; it doesn't inject senders in its own context`). O subagente sobe o debug server (`scripts/debug-server.js`) em background — o canal de captura padrão (o Cursor faz idêntico: "spins up an HTTP server to listen to these logs") — e injeta, nos pontos que o digest da F2 apontou como os que **distinguem as hipóteses**, um *sender* que faz `POST` ao server com payload estruturado: `{tag: "DEBUG-<hash>", hyp: "H2", var: "...", value: ..., file: "...", line: NN}`. Cada inserção leva um **comentário-âncora** na linha de cima — `// DEBUG-<hash> (sdd:debug) — remover na limpeza` — para que a remoção da F8 seja inequívoca. O `<hash>` é um identificador único de 4 caracteres desta sessão (ex: `a4f2`). O subagente devolve o **manifesto preenchido** (hash, arquivos:linha instrumentados, porta, caminho do `.jsonl`); o orquestrador grava no report sem ver os bytes do source.
+**O orquestrador comissiona a instrumentação a um subagente — não injeta senders no próprio contexto** (`the orchestrator commissions the instrumentation; it doesn't inject senders in its own context`). O subagente sobe o debug server (`scripts/debug-server.js`) em background — **o canal de captura em TODOS os casos, sem exceção** (o Cursor faz idêntico: "spins up an HTTP server to listen to these logs"). **Não há atalho de `console.log`/stdout** — mesmo num serviço local simples, a captura vai pelo debug server, apontando para `docs/debug/<slug>/session.jsonl` (a pasta da sessão criada na F0). O subagente injeta, nos pontos que o digest da F2 apontou como os que **distinguem as hipóteses**, um *sender* que faz `POST` ao server com payload estruturado: `{tag: "DEBUG-<hash>", hyp: "H2", var: "...", value: ..., file: "...", line: NN}`. Cada inserção leva um **comentário-âncora** na linha de cima — `// DEBUG-<hash> (sdd:debug) — remover na limpeza` — para que a remoção da F8 seja inequívoca. O `<hash>` é um identificador único de 4 caracteres desta sessão (ex: `a4f2`). O subagente devolve o **manifesto preenchido** (hash, arquivos:linha instrumentados, porta, caminho do `.jsonl`); o orquestrador grava no report sem ver os bytes do source.
 
 > **Reuso (ponytail):** o subagente de instrumentação é o **mesmo tipo do fix-executor** — editar arquivos por briefing, marcar com âncoras, devolver manifesto é a mesma operação. Não invente um terceiro papel. Para um bug localizado, instrumentação e fix podem ser **um único fix-executor** num só briefing.
 
 O briefing do subagente é **~500 tokens, self-contained, execution-ready**: os pontos a instrumentar (do digest F2), o hash da sessão, o comando para subir o server. Os logs são **dirigidos por hipótese, não aleatórios** — instrumentação alvo, não spam de `console.log`: cada um imprime exatamente o que confirma ou refuta uma hipótese (o valor da variável suspeita, qual branch foi tomado, o timing, o estado na fronteira entre camadas). Instrumentação **mínima** (3–5 pontos que separam as hipóteses, não dezenas). O sender por linguagem, o lifecycle do server e o fallback de file-write estão em `references/runtime-capture.md`.
 
-**Persista o manifesto de limpeza** no report: o `DEBUG-<hash>`, os arquivos instrumentados, a porta do server e o caminho do `.jsonl`. É o que a F8 vai remover — sem ele, instrumentação órfã fica para sempre se a sessão cair.
+**Persista o manifesto de limpeza** no report: o `DEBUG-<hash>`, os arquivos instrumentados (**com o repo de cada um**, se multi-repo), a porta do server e o caminho do `.jsonl` (`docs/debug/<slug>/session.jsonl`). É o que a F8 vai remover — sem ele, instrumentação órfã fica para sempre se a sessão cair.
 
 ### F4 — Reprodução + coleta (humano dispara / agente coleta)
-**Se a app precisa reiniciar para carregar a instrumentação** (servidor backend, build de front, processo long-running), peça o restart antes de reproduzir — o Cursor faz esse passo explícito ("restart the application and reproduce the bug"). Então faça o bug rodar e capture a evidência. **Quem dispara depende do repro:**
+**Reiniciar o serviço-alvo é obrigatório quando ele é long-running** (servidor backend, build de front, watcher). Os senders só passam a postar no debug server **depois do restart** — instrumentar sem reiniciar não captura nada, e o agente fica olhando um `.jsonl` vazio achando que o repro não disparou. O Cursor faz esse passo explícito ("restart the application and reproduce the bug"). Ao reiniciar:
+- **Use o runtime que o repo exige.** Cheque `engines`/`.nvmrc`/`package.json` *daquele* repo; um mismatch de Node ou gerenciador barra o boot (ex. real: o gate `engines.node>=24` do pnpm impediu o start — foi preciso o Node certo via nvm e rodar o entrypoint compilado direto). Confirme no stdout do boot que o serviço subiu ("listening on ...").
+- **Se você derrubou o processo do dev para reiniciar, anote isso no manifesto e RESTAURE-o ao estado original na F8.** Não deixe o ambiente do humano diferente de como estava.
+
+Então faça o bug rodar e capture a evidência. **Quem dispara depende do repro:**
 - **Roteirizável** (um teste, um `curl`, um `browser_navigate`) → o agente dispara sozinho.
+- **Repro backend cuja auth vive no browser** (cookie httpOnly, sessão server-side) → **o agente dispara via Playwright**: o browser logado aciona o request que o `curl` não consegue (sem token). Playwright não é só captura visual — é o disparador do fluxo backend quando a sessão está no navegador.
 - **Manual** (precisa de login real, estado montado à mão, hardware) → o humano dispara na app real; o agente observa. É o "tight back-and-forth": o agente faz o trabalho tedioso, o humano dá os passos que só ele tem.
 
-**A captura é o `.jsonl`:** leia `docs/debug/<slug>.jsonl` (estruturado, parseável, independente de qual processo/terminal emitiu — e unifica backend e frontend num canal só). Para o tipo (b), complemente com Playwright (`browser_console_messages`, `browser_network_requests`, `browser_take_screenshot`) para o que o log não vê — o visual. Detalhes e o ranking de como automatizar o repro em `references/runtime-capture.md`.
+**A captura é o `.jsonl`:** leia `docs/debug/<slug>/session.jsonl` (estruturado, parseável, independente de qual processo/terminal emitiu — e unifica backend e frontend num canal só, mesmo em multi-repo). Para o tipo (b), complemente com Playwright (`browser_console_messages`, `browser_network_requests`, `browser_take_screenshot`, e `browser_run_code_unsafe`/`browser_evaluate` para prova de hit-testing) para o que o log não vê — o visual e a geometria. Detalhes e o ranking de como automatizar o repro em `references/runtime-capture.md`.
 
 **Confronte cada registro com as hipóteses:** atualize no report `✅ confirmada` / `❌ refutada` + a evidência (a linha exata do `.jsonl`). Nenhuma confirmada e os logs não bastam? → volte à F3 com instrumentação mais fina — **isso conta como 1 tentativa do circuit breaker.** Uma confirmada → F5.
 
@@ -122,9 +131,10 @@ Esta é a fase que **faltou** nas execuções reais — a skill declarava resolv
 **(1) closing-gate subagent — a prova.** O orquestrador comissiona um subagente que **anda a matriz e devolve um veredito estruturado** (`the orchestrator commissions the proof and reads the verdict; it doesn't run the checks in its own context`). O closing-gate prova, nesta ordem:
 1. **Re-repro:** roda o **MESMO repro da F4** com o fix — a evidência que antes mostrava o bug agora mostra o comportamento certo. **Prova por reprodução, não por vibe.**
 2. **Teste verde:** o teste de regressão da F6 passa.
-3. **Limpeza com grep-zero:** mata o processo do debug server (manifesto F3) → **apaga o `.jsonl`** (`docs/debug/<slug>.jsonl`) *antes* do grep, senão o grep acha o próprio `DEBUG-<hash>` dentro do arquivo de captura → remove cada sender E seu comentário-âncora → `grep -rn "DEBUG-<hash>" .` retorna **zero**. Cheque também branches aninhados que não rodaram — o grep-zero é a rede que pega o sender órfão que o `.jsonl` não viu. (`the closing-gate removes the instrumentation and proves grep-zero; the orchestrator reads the verdict`.)
+3. **Limpeza com grep-zero (por repo):** mata o processo do debug server (manifesto F3) → **apaga o `.jsonl`** (`docs/debug/<slug>/session.jsonl`) *antes* do grep, senão o grep acha o próprio `DEBUG-<hash>` dentro do arquivo de captura → remove cada sender E seu comentário-âncora → `grep -rn "DEBUG-<hash>" .` retorna **zero**. **Multi-repo: o grep-zero roda em CADA repo instrumentado** (o manifesto nomeia o repo de cada sender) — um sender esquecido no 2º repo é um `console.log` órfão que vai para o PR daquele repo. Cheque também branches aninhados que não rodaram — o grep-zero é a rede que pega o sender órfão que o `.jsonl` não viu.
+4. **Restaurar o ambiente:** qualquer serviço do dev que você reiniciou/derrubou na F4 volta ao estado original (mesmo runtime, mesmo modo — watch/dev). (`the closing-gate removes the instrumentation and proves grep-zero; the orchestrator reads the verdict`.)
 
-O veredito volta como checklist: `re-repro OK / teste verde / grep-zero OK / server morto / .jsonl apagado`. Veredito vermelho em qualquer item → **não fecha**; volta à fase correspondente (re-repro falhou = hipótese errada → circuit breaker).
+O veredito volta como checklist: `re-repro OK / teste verde / grep-zero OK em cada repo / server morto / .jsonl apagado / serviço(s) do dev restaurado(s)`. Veredito vermelho em qualquer item → **não fecha**; volta à fase correspondente (re-repro falhou = hipótese errada → circuit breaker).
 
 **(2) Confirmação humana — o carimbo.** Com o veredito verde em mãos, o orquestrador pergunta ao humano via `AskUserQuestion`: *"o sintoma original que você reportou sumiu de fato?"*. **É a única pergunta de fechamento** (o humano só é consultado nas pontas: repro inicial na F1, confirmação aqui). Sem o "sim", o status fica `fix-aplicado`, não `resolvido`.
 
@@ -143,6 +153,7 @@ O orquestrador **comissiona e sintetiza**; ele nunca lê source nem edita códig
 | Subir o server + injetar os senders de instrumentação | **Subagente `instrumentation-executor`** (mesmo tipo do fix-executor) | escrita em produção sai do orquestrador (R4) |
 | Disparar o repro na app real (login, estado manual, hardware) | **Humano** | o agente não tem as credenciais/o ambiente — o "back-and-forth" do Debug Mode |
 | Disparar repro roteirizável (teste, curl, `browser_navigate`) + capturar o `.jsonl`/Playwright | **Agente** | determinístico, "the agent handles the tedious work" |
+| Disparar repro backend cuja auth vive no browser (cookie httpOnly/sessão) | **Agente via Playwright** | o browser logado dispara o request; `curl` falha sem token |
 | Decidir se um comportamento é bug ou intencional | **Humano** (`AskUserQuestion`) | é julgamento de produto, não evidência |
 | Escrever o teste RED→GREEN + o fix + commitar | **Subagente `fix-executor`** | execução cirúrgica TDD; um por fix, fora do contexto do orquestrador |
 | Re-reproduzir + provar teste verde + limpar instrumentação + grep-zero | **Subagente `closing-gate`** | a prova é comissionada, não auto-executada |
@@ -159,7 +170,7 @@ Sem o breaker, um agente "conserta" seis vezes, cada fix mascarando o anterior, 
 
 ## Artefato — um report leve e descartável
 
-Grave um bug report leve e incremental (~meia página) seguindo `templates/debug-report.template.md`. Local: `docs/specs/<feature>/debug-<slug>.md` se o bug está numa feature especificada (herda o contexto); senão `docs/debug/<slug>.md`. **Crie-o já na F1/F2** (`status: investigando`) — não no fim. Ele percorre três estados: `investigando` → `fix-aplicado` (GREEN do fix-executor, mas closing-gate/humano ainda não confirmaram) → `resolvido` (só com closing-gate verde **e** confirmação humana).
+Grave um bug report leve e incremental (~meia página) seguindo `templates/debug-report.template.md`. Local: `docs/debug/<slug>/report.md` (a pasta da sessão criada na F0, com o `session.jsonl` ao lado); ou `docs/specs/<feature>/debug-<slug>.md` se o bug está numa feature especificada (herda o contexto da spec). **Crie-o já na F1/F2** (`status: investigando`) — não no fim. Ele percorre três estados: `investigando` → `fix-aplicado` (GREEN do fix-executor, mas closing-gate/humano ainda não confirmaram) → `resolvido` (só com closing-gate verde **e** confirmação humana).
 
 O report **é o state.md do debug** — não crie um arquivo de estado separado, ele já é o cursor de resumibilidade. Por isso: **reescreva-o no instante em que cada fase fecha — never append**, mantenha-o ~300–400 tokens. É um cursor, não um log; um diário que cresce perde a função. Se a sessão morre, o report no disco diz quais hipóteses já caíram, quais `DEBUG-<hash>` estão soltos, e em que estado o fix está — para não re-decidir o já decidido.
 
@@ -212,3 +223,9 @@ Nas reviews do Debug Mode do Cursor, esse método pegou race conditions que pass
 | Recusar porque falta o mapa | Debug é emergencial — degrade para ungrounded, avise, e declare o risco no report. |
 | Transformar o debug numa feature sem spec | Fix grande/arquitetural → fronteira honesta: recomende `sdd:spec`/`sdd:plan`. |
 | Instrumentar no escuro um bug que não reproduz | Se não reproduz sob instrumentação (intermitente, só-produção, memory leak, hardware), diga ao humano e mude de abordagem — é a limitação central do método. |
+| Instrumentar o 2º repo sem ler o mapa dele | Multi-repo: mini-F0 no repo-alvo (o `context.md` dele) antes de tocar — as invariantes são outras. |
+| Instrumentar serviço long-running sem reiniciar | Os senders só postam após o restart; reinicie com o runtime que o repo exige (`engines`/`.nvmrc`) e confirme "listening". |
+| Capturar por `console.log`/stdout | Debug server SEMPRE — o canal único, apontando para `docs/debug/<slug>/session.jsonl`. stdout/file-write só em sandbox sem rede. |
+| `.md` e `.jsonl` soltos em `docs/debug/` | Pasta-por-sessão: `docs/debug/<slug>/` com `report.md` E `session.jsonl` dentro. Em multi-repo, no repo onde a sessão começou. |
+| Deixar o ambiente do dev alterado | Se reiniciou/derrubou um serviço para instrumentar, restaure-o ao estado original no closing-gate. |
+| Achar que Playwright só serve para o visual | Quando a auth vive no browser, Playwright dispara o fluxo backend; e `browser_evaluate`/`run_code_unsafe` prova hit-testing (`elementFromPoint`). |
