@@ -3,6 +3,9 @@
 // A instrumentação injetada no código (os "senders") faz POST localhost:<porta> com um
 // JSON por evento; este servidor só recebe e faz append, 1 linha JSON por POST, no arquivo
 // de captura. O agente lê esse arquivo para confrontar evidência de runtime vs hipóteses.
+// Shape típico do payload (campos livres — o server grava qualquer JSON; ver runtime-capture.md):
+//   {tag, hyp, stage, seq, var, value, file, line}  — `tag` (DEBUG-<hash>) é o que a F8 grepa;
+//   `stage`/`seq` deixam uma cadeia de fluxo legível por agregação (1º stage ausente = elo que morre).
 //
 // Uso:  node debug-server.js [arquivo-de-saida] [porta]
 //   arquivo-de-saida  a skill passa docs/debug/<slug>/session.jsonl (pasta-por-sessão);

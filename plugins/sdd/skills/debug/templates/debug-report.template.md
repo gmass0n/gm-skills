@@ -72,11 +72,11 @@ generated: <data>
 
 ## Closing-gate (veredito — o gate duplo da F8)
 <o closing-gate prova; status só vira "resolvido" com todos marcados.>
-- [ ] re-repro = comportamento certo (o MESMO repro da F4, agora correto)
+- [ ] re-repro com a MESMA instrumentação viva = delta provado no mesmo `.jsonl` (antes: <ex. `stage:event-fired` ausente / valor errado> → depois: <ex. presente / valor certo>)
 - [ ] teste de regressão verde
-- [ ] grep-zero `DEBUG-<hash>` no código — **em cada repo de `repos:`**
+- [ ] grep-zero `DEBUG-<hash>` no código — **em cada repo de `repos:`** (só depois do delta acima)
 - [ ] processo do debug server morto
-- [ ] `session.jsonl` apagado
+- [ ] `session.jsonl` apagado (depois de lido o delta, antes do grep-zero)
 - [ ] serviço(s) do dev reiniciado(s) na F4 restaurado(s) ao estado original
 - [ ] humano confirmou que o sintoma original sumiu (`confirmacao-humana`)
 

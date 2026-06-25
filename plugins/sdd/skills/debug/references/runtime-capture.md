@@ -22,9 +22,21 @@ Anexe a evidência da inspeção ao `.jsonl`/report como linha citável, igual a
 Quando o modo 1 se aplica, a captura vai pelo debug server, sem `console.log` solto. O Cursor resolve isso com um debug server numa extensão — a instrumentação faz um `POST localhost` e o server agrega tudo. Replicamos isso com `scripts/debug-server.js`:
 
 - **stdlib pura (`http`+`fs`), zero dependências, zero build.** Roda em qualquer projeto Node sem instalar nada. Para projetos não-Node, ele ainda serve: é um endpoint HTTP agnóstico, e o sender (em Python, Go, etc.) só precisa fazer um POST.
-- **Captura estruturada.** Cada POST vira 1 linha JSON em `docs/debug/<slug>/session.jsonl` (a pasta da sessão criada na F0; o `report.md` é irmão dele). `{tag, hyp, var, value, file, line}` é parseável; você lê o arquivo e cruza com as hipóteses sem adivinhar.
+- **Captura estruturada.** Cada POST vira 1 linha JSON em `docs/debug/<slug>/session.jsonl` (a pasta da sessão criada na F0; o `report.md` é irmão dele). `{tag, hyp, stage, seq, var, value, file, line}` é parseável; você lê o arquivo e cruza com as hipóteses sem adivinhar.
 - **Canal único — inclusive multi-repo.** Backend e frontend POSTam pro mesmo server → a evidência dos dois lados (de dois repos, inclusive) cai no mesmo `session.jsonl`, na ordem real dos eventos. É por isso que a pasta da sessão fica num único repo: tudo converge num só lugar.
 - **Independente do terminal.** Não importa qual processo emitiu — o POST sempre chega.
+
+## Ler o `.jsonl` por agregação — veredito, não bytes
+
+Quem lê o `.jsonl` é um **subagente** (o orquestrador é puro — nunca lê a captura crua). E o subagente **não despeja o arquivo no digest**: ele **agrega e devolve só o veredito**. Despejar centenas de eventos crus no contexto do orquestrador é o oposto do que a captura estruturada existe para evitar.
+
+- **Bug de cadeia (tipo c):** conte hits por `stage` e reporte **o primeiro `stage` com zero hits** — é o elo onde o fluxo morre.
+  ```bash
+  # hits por stage; o 1º com 0 é onde a cadeia morre
+  node -e 'let c={};require("fs").readFileSync("docs/debug/<slug>/session.jsonl","utf8").split("\n").filter(Boolean).forEach(l=>{try{let s=JSON.parse(l).stage||"?";c[s]=(c[s]||0)+1}catch{}});console.log(JSON.stringify(c))'
+  ```
+  O subagente devolve `{"event-fired":0,"handler-entered":0,...}` (≈1 linha), não os eventos. Caso real: `event-fired:0` isolou a causa (o player nunca dispara `timeupdate`) sem ler um único payload cru.
+- **Bug pontual (a/b):** agregue por `hyp` — qual hipótese teve evidência confirmatória, e o valor observado na fronteira. Mesmo princípio: o orquestrador lê o veredito agregado e decide a causa; os bytes crus ficam no `.jsonl`.
 
 ## Subir e derrubar o server (lifecycle)
 
@@ -43,7 +55,7 @@ rm docs/debug/<slug>/session.jsonl      # 2. apaga a captura ANTES do grep (sen�
 grep -rn "DEBUG-<hash>" .               # 3. prova grep-zero no código — em CADA repo instrumentado
 ```
 
-**Lifecycle disciplinado (o closing-gate da F8 depende disso):** o server sobe na F3, vive durante F4–F6, e morre no closing-gate (F8) — então o `.jsonl` é apagado e os senders removidos (grep-zero **em cada repo**). **A ordem importa:** apague o `.jsonl` antes do grep-zero, senão o `grep` encontra o próprio `DEBUG-<hash>` dentro do arquivo de captura (é onde ele deve estar) e o grep-zero nunca fecha. Nada do server sobrevive ao fim do debug. Registre porta + pid + caminho do `.jsonl` no manifesto do report assim que subir.
+**Lifecycle disciplinado (o closing-gate da F8 depende disso):** o server sobe na F3, vive durante F4–F6 **e através do re-repro da F8** — porque o **mesmo `session.jsonl` guarda o "antes" (bug) e o "depois" (fix)**, e o delta entre os dois é a prova mais barata de que o sintoma sumiu (ver F8, item 1). Só **depois** de o closing-gate ler esse delta é que o server morre, o `.jsonl` é apagado e os senders removidos (grep-zero **em cada repo**). Apagar o `.jsonl` ou remover senders *antes* do re-repro pós-fix descarta a prova mais barata e força re-instrumentação manual (retrabalho). **A ordem da limpeza importa:** apague o `.jsonl` antes do grep-zero, senão o `grep` encontra o próprio `DEBUG-<hash>` dentro do arquivo de captura (é onde ele deve estar) e o grep-zero nunca fecha. Nada do server sobrevive ao fim do debug. Registre porta + pid + caminho do `.jsonl` no manifesto do report assim que subir.
 
 ## Senders por linguagem
 
@@ -57,8 +69,16 @@ Marque sempre cada inserção com o **comentário-âncora** na linha de cima, pa
 **JavaScript / TypeScript (browser ou Node 18+):**
 ```js
 // DEBUG-a4f2 (sdd:debug) — remover na limpeza
-fetch('http://localhost:9999',{method:'POST',body:JSON.stringify({tag:'DEBUG-a4f2',hyp:'H2',var:'user',value:user,file:'foo.ts',line:42})}).catch(()=>{});
+fetch('http://localhost:9999',{method:'POST',body:JSON.stringify({tag:'DEBUG-a4f2',hyp:'H2',stage:'http-sent',seq:3,var:'payload',value:payload,file:'foo.ts',line:42})}).catch(()=>{});
 ```
+
+**Campos do payload** (todos opcionais exceto `tag`; o server grava qualquer JSON, então adicionar campos não quebra nada):
+- `tag` — o `DEBUG-<hash>` da sessão (**obrigatório**; é o que a F8 grepa para remover).
+- `hyp` — qual hipótese este sender testa (`H2`), para cruzar evidência com hipótese.
+- `var` / `value` — a variável observada e seu valor no runtime (pode ser `null`/`undefined`/objeto).
+- `file` / `line` — onde o sender vive.
+- **`stage`** — o elo da cadeia, em **bug de fluxo** (tipo c): `event-fired | handler-entered | guard-passed | http-sent | http-acked | persisted` (ou os nomes reais do fluxo). É o que deixa a cadeia legível numa passada: **o primeiro `stage` ausente no `.jsonl` é o elo onde o fluxo morre** — e isolar isso mata várias hipóteses de uma vez (ver F2, "bug pontual vs. cadeia"). Em bug pontual (a/b) é dispensável.
+- **`seq`** — inteiro crescente por sender (ou use a ordem de chegada no `.jsonl`); junto com `stage` reconstrói a ordem real dos eventos quando timing importa.
 
 **Node antigo (sem `fetch`):**
 ```js
