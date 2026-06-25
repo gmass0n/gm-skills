@@ -12,9 +12,10 @@ Travado pelo prompt inicial do `sdd:debug` (`lang: pt|en` no frontmatter). Tudo 
 ---
 title: debug — <slug>
 lang: pt | en
-status: investigando | resolvido     # "resolvido" só após F8 (grep-zero, server morto, .jsonl apagado)
+status: investigando | fix-aplicado | resolvido   # fix-aplicado = GREEN do fix-executor; resolvido só com closing-gate verde E confirmacao-humana
 debug-tag: DEBUG-a4f2                  # hash único da sessão — o manifesto de limpeza
 feature: <feature ou ->               # link à spec se houver; "-" se bug avulso
+confirmacao-humana: <- | sim (data)>  # carimbo do AskUserQuestion final; sem ele, status nunca é "resolvido"
 generated: <data>
 ---
 
@@ -35,8 +36,16 @@ generated: <data>
 - H2: <mecanismo> — <arquivo> — ✅ confirmada (evidência: [DEBUG-a4f2] em foo.ts:42 mostrou user=null)
 - H3: <mecanismo> — <arquivo> — ❌ refutada (evidência: branch B nunca foi tomado no .jsonl)
 
+## Subagentes spawnados (manifesto de orquestração)
+<cada subagente comissionado, para auditar a pureza do orquestrador e resumir se a sessão cair.
+ O orquestrador não aparece aqui — ele só comissiona e sintetiza.>
+- Explore (F2/F5): <o que leu>
+- instrumentation-executor (F3): <arquivos instrumentados> — ou "—" se colapsado no fix-executor
+- fix-executor (F6): <o fix + commit>
+- closing-gate (F8): <veredito>
+
 ## Instrumentação (manifesto de limpeza)
-<tudo que a F8 vai remover. Sem isto, instrumentação órfã fica para sempre se a sessão cair.
+<tudo que o closing-gate vai remover. Sem isto, instrumentação órfã fica para sempre se a sessão cair.
  Cada sender tem um comentário-âncora `// DEBUG-<hash> (sdd:debug) — remover na limpeza` na linha de cima.>
 - debug-tag: DEBUG-a4f2
 - senders em: src/.../foo.ts:42, src/.../bar.ts:88
@@ -50,9 +59,21 @@ generated: <data>
 <arquivo:linha + 1 frase do que mudou. Cite a invariante de context.md que o fix respeita
  e o padrão da camada que ele segue.>
 
-## Regressão
-<o teste que falhava antes e passa depois. nome + path (do conventions/testing.md). REQ-x se houver.
- Se foi pulado (escape honesto): "sem teste — <motivo>", registrado como dívida.>
+### Prova TDD (do fix-executor)
+<a prova de R2 — RED antes de GREEN. Sem o RED, o teste passou trivialmente e não prova nada.>
+- comando: <yarn test <spec> / pytest ...>
+- RED (antes do fix): <saída colada — o teste falhou>
+- GREEN (depois do fix): <saída colada — o teste passou>
+- Se pulado (escape honesto): "sem teste — <motivo>", registrado como dívida.
+
+## Closing-gate (veredito — o gate duplo da F8)
+<o closing-gate prova; status só vira "resolvido" com os 6 marcados.>
+- [ ] re-repro = comportamento certo (o MESMO repro da F4, agora correto)
+- [ ] teste de regressão verde
+- [ ] grep-zero `DEBUG-<hash>` no código
+- [ ] processo do debug server morto
+- [ ] `.jsonl` apagado
+- [ ] humano confirmou que o sintoma original sumiu (`confirmacao-humana`)
 
 ## Tentativas (só se houve circuit breaker)
 <as hipóteses que não seguraram, para não repeti-las ao re-hipotetizar. Apague se nunca disparou.>
@@ -60,9 +81,9 @@ generated: <data>
 
 ## Regras de preenchimento
 
-- **Persistência incremental.** As hipóteses entram aqui no momento em que surgem (F2), com status `❓`; viram `✅`/`❌` conforme a evidência da F4. O manifesto de instrumentação entra na F3, antes de qualquer reprodução. É o que torna o debug resumível se a sessão morrer.
+- **Persistência incremental, rewrite never append.** As hipóteses entram aqui no momento em que surgem (F2), com status `❓`; viram `✅`/`❌` conforme a evidência da F4. O manifesto de instrumentação entra na F3, antes de qualquer reprodução. **Reescreva o report a cada fase que fecha — nunca faça append; mantenha-o ~300–400 tokens.** É o state.md do debug (não crie outro): um cursor, não um log.
 - **`debug-tag` é o manifesto.** O hash único (`DEBUG-<hash>`) aparece no frontmatter e na seção de instrumentação. A F8 faz `grep` por ele para remover toda a instrumentação — um hash esquecido é um `console.log` órfão no diff.
 - **Sintoma do tipo c precisa de "esperado vs obtido".** Sem erro que grite, o que define o bug é a divergência. Escreva-a explícita.
 - **Causa raiz nomeia callers.** O número de callers que compartilham o bug é o que justifica o fix na função compartilhada em vez de no caller nomeado.
-- **Regressão é o registro durável.** O `.md` é descartável; o teste no git não. Se o teste foi pulado, a dívida fica escrita aqui — não some no silêncio.
-- **`status: resolvido` é um gate real.** Só vira `resolvido` depois da F8 completa: grep-zero dos senders, processo do server morto, `.jsonl` apagado. Enquanto `investigando`, há instrumentação viva no código.
+- **A prova TDD é registro durável.** O `.md` é descartável; o teste no git não. O RED colado prova que o teste foi escrito antes do fix. Se o teste foi pulado, a dívida fica escrita aqui — não some no silêncio.
+- **`status` é um gate real, em dois saltos.** `investigando` → `fix-aplicado` (o fix-executor fechou o GREEN, mas nada ainda confirmou que resolve o sintoma) → `resolvido` (**só** com os 6 checkboxes do closing-gate marcados **e** `confirmacao-humana` preenchida). Pular de `investigando` direto para `resolvido` é exatamente a falha que esta skill existe para impedir.

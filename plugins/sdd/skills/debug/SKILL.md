@@ -9,7 +9,7 @@ description: "Caçar a causa raiz de um bug e aplicar um fix cirúrgico — fora
 
 Um bug é um sintoma. A tentação — a do Claude cru, a do dev às 3am — é editar a primeira linha plausível e torcer. Isso é a pressa que paga caro: o fix mascara o sintoma, o bug volta noutro lugar, e o diff vira lixo. Esta skill troca o palpite por **evidência de runtime**: gera hipóteses, instrumenta o código para testá-las, faz o bug rodar de verdade, lê o que realmente aconteceu, e só então corrige — na raiz, com o menor diff possível, provando o fix antes de declará-lo.
 
-É a **anti-skill** das outras quatro do SDD. Elas são *forward* (ideia → spec → plan → código), exaustivas, com gates. Esta é *backward* (sintoma → causa → fix), rápida, cirúrgica. Mas herda o DNA: orquestra delegando leitura de código a subagentes, lê o mapa da codebase, persiste incremental, e prova o que afirma.
+É a **anti-skill** das outras quatro do SDD. Elas são *forward* (ideia → spec → plan → código), exaustivas, com gates. Esta é *backward* (sintoma → causa → fix), rápida, cirúrgica. Mas herda o DNA por inteiro — incluindo o que mais falta no Claude cru: **o orquestrador é puro.** Um subagente fresco por leitura, por instrumentação, por fix, por prova — **obrigatório mesmo para um único fix de uma linha**; o orquestrador **nunca lê source nem edita código no próprio contexto**, só comissiona subagentes, lê os digests e os veredictos, e sintetiza. (`pure orchestrator — one fresh subagent per read, per fix, per proof, mandatory even for a single fix; never coding or analyzing in its own context`, igual a `sdd:implement`/`sdd:plan`.) Lê o mapa da codebase, persiste incremental, e prova o que afirma — nunca declara resolvido sem prova técnica **e** confirmação humana.
 
 **O eixo rápido-vs-rigor resolve-se assim: o rigor É o atalho.** Hipóteses-primeiro não é lentidão — é o que evita três fixes errados em sequência. Causa raiz não é cerimônia — é o diff menor (uma guarda na função compartilhada é menos código que uma guarda em cada caller). A pressa que funciona é hipótese-primeiro; pular pro fix é a pressa que te paga às 3am.
 
@@ -42,7 +42,9 @@ Reconhecer cedo que o bug está fora do alcance do método é parte da disciplin
 
 ## O fluxo — oito fases, um funil com gate
 
-Cada fase consome o que a anterior produziu; você não avança sem isso. Há um **`[FAST-PATH]`** para bugs triviais (o stack trace aponta uma causa óbvia e localizada — um arquivo, um erro de tipo claro, um import faltando): nesse caso pule F2–F4 e vá direto ao fix (F6), depois verifique (F7) e — se houver instrumentação — limpe (F8). O fast-path existe para não burocratizar um typo; o critério é estrito (1 arquivo, causa óbvia no stack), e na dúvida você NÃO está no fast-path.
+Cada fase consome o que a anterior produziu; você não avança sem isso. **Sem atalho: até um null check de uma linha passa pelo fluxo completo — os gates SÃO o valor.** Foi exatamente o atalho que falhou nas execuções reais (pulou hipóteses, não criou o report, não fez TDD, declarou resolvido sem provar). Não há fast-path.
+
+**A skill não é cerimônia — é orquestração.** A pureza do orquestrador e o gate de fechamento são o que faltou e o que não negocia; **o número de subagentes intermediários colapsa para o tamanho do bug.** Um bug localizado de uma hipótese pode ser **um único fix-executor** que instrumenta, confirma, corrige e prova num só briefing — não são 8 subagentes para um null check. O que nunca colapsa é o gate de fechamento (closing-gate + confirmação humana).
 
 ### F0 — Grounding
 Leia `context.md` (acima), trave o idioma, e veja se o bug cai numa `docs/specs/<feature>/` existente (anote para a F5 — saber o comportamento *esperado* muda o fix). Esta é a única leitura de disco que o orquestrador faz no próprio contexto; todo o resto (source, specs, testing.md) vai por subagente.
@@ -56,8 +58,7 @@ Leia `context.md` (acima), trave o idioma, e veja se o bug cai numa `docs/specs/
   - **(c) fluxo errado / silencioso** — sem erro, mas resultado errado: valor incorreto, branch não tomado, ordem trocada, estado divergente. O mais traiçoeiro — nada grita.
 - **Capture o "fato 0" exato:** a mensagem literal, o arquivo:linha do topo do stack, o valor errado *vs* o esperado. É o que ancora as hipóteses.
 - **Peça ao humano via `AskUserQuestion`:** o repro mínimo (*como eu disparo isso?*) e o artefato que ele já tem (*tem o stack/log/screenshot? cola aqui*) — porque a evidência que o humano já possui é a captura mais barata que existe.
-- **Minimize o repro:** encolha ao menor cenário que ainda fica vermelho — mantenha só o que é load-bearing para a falha. Um repro minimizado torna as hipóteses mais nítidas e o `.jsonl` menos ruidoso.
-- **Decisão fast-path:** stack aponta causa óbvia e localizada? → `[FAST-PATH]` → F6.
+- **Minimize o repro:** encolha ao menor cenário que ainda fica vermelho — mantenha só o que é load-bearing para a falha. Um repro minimizado torna as hipóteses mais nítidas e o `.jsonl` menos ruidoso. **Esse repro minimizado costuma virar, literalmente, o teste RED do fix-executor na F6** — não é trabalho jogado fora, é o teste de regressão nascendo cedo.
 
 ### F2 — Hipóteses múltiplas (o coração)
 **Antes de qualquer fix**, gere **2 a 5 hipóteses de causa raiz** distintas. Cada uma:
@@ -69,16 +70,16 @@ Leia `context.md` (acima), trave o idioma, e veja se o bug cai numa `docs/specs/
 
 **Persista já:** grave as hipóteses no report com status `❓ não testada`. Se a sessão morrer, elas sobrevivem.
 
-**Regra anti-pulo (inegociável):** se você está prestes a editar código de produção e ainda **não tem evidência de runtime que confirme uma hipótese, PARE — você está adivinhando.** O Debug Mode não chuta; coleta. Vá para F3. (As frases-armadilha que sinalizam que você voltou a adivinhar estão em `references/hypothesis-discipline.md` — leia-o quando sentir a tentação do "vou só tentar esse fix rápido".) Exceção: `[FAST-PATH]`.
+**Regra anti-pulo (inegociável, sem exceção):** se você está prestes a comissionar um fix-executor e ainda **não tem evidência de runtime que confirme uma hipótese, PARE — você está adivinhando.** O Debug Mode não chuta; coleta. Vá para F3. (As frases-armadilha que sinalizam que você voltou a adivinhar estão em `references/hypothesis-discipline.md` — leia-o quando sentir a tentação do "vou só tentar esse fix rápido".)
 
-### F3 — Instrumentação dirigida + sobe o debug server
-Suba o debug server (`scripts/debug-server.js`) em background — é o canal de captura padrão (o Cursor faz idêntico: "spins up an HTTP server to listen to these logs"). Injete, nos pontos que **distinguem as hipóteses**, um *sender* que faz `POST` ao server com payload estruturado: `{tag: "DEBUG-<hash>", hyp: "H2", var: "...", value: ..., file: "...", line: NN}`. Marque cada inserção com um **comentário-âncora** na linha de cima — `// DEBUG-<hash> (sdd:debug) — remover na limpeza` — para que a remoção da F8 seja inequívoca (o Cursor marca a instrumentação com "clear comments which help the AI clean them up later"; nós fazemos o mesmo). O `<hash>` é um identificador único de 4 caracteres desta sessão (ex: `a4f2`).
+### F3 — Instrumentação dirigida + sobe o debug server (comissionada)
+**O orquestrador comissiona a instrumentação a um subagente — não injeta senders no próprio contexto** (`the orchestrator commissions the instrumentation; it doesn't inject senders in its own context`). O subagente sobe o debug server (`scripts/debug-server.js`) em background — o canal de captura padrão (o Cursor faz idêntico: "spins up an HTTP server to listen to these logs") — e injeta, nos pontos que o digest da F2 apontou como os que **distinguem as hipóteses**, um *sender* que faz `POST` ao server com payload estruturado: `{tag: "DEBUG-<hash>", hyp: "H2", var: "...", value: ..., file: "...", line: NN}`. Cada inserção leva um **comentário-âncora** na linha de cima — `// DEBUG-<hash> (sdd:debug) — remover na limpeza` — para que a remoção da F8 seja inequívoca. O `<hash>` é um identificador único de 4 caracteres desta sessão (ex: `a4f2`). O subagente devolve o **manifesto preenchido** (hash, arquivos:linha instrumentados, porta, caminho do `.jsonl`); o orquestrador grava no report sem ver os bytes do source.
 
-Os logs são **dirigidos por hipótese, não aleatórios** — instrumentação alvo, não spam de `console.log`: cada um imprime exatamente o que confirma ou refuta uma hipótese (o valor da variável suspeita, qual branch foi tomado, o timing, o estado na fronteira entre camadas). Mantenha a instrumentação **mínima** (3–5 pontos que separam as hipóteses, não dezenas) — menos ruído no `.jsonl`, menos a limpar. O sender por linguagem, o lifecycle do server e o fallback de file-write (quando não há rede local) estão em `references/runtime-capture.md`.
+> **Reuso (ponytail):** o subagente de instrumentação é o **mesmo tipo do fix-executor** — editar arquivos por briefing, marcar com âncoras, devolver manifesto é a mesma operação. Não invente um terceiro papel. Para um bug localizado, instrumentação e fix podem ser **um único fix-executor** num só briefing.
+
+O briefing do subagente é **~500 tokens, self-contained, execution-ready**: os pontos a instrumentar (do digest F2), o hash da sessão, o comando para subir o server. Os logs são **dirigidos por hipótese, não aleatórios** — instrumentação alvo, não spam de `console.log`: cada um imprime exatamente o que confirma ou refuta uma hipótese (o valor da variável suspeita, qual branch foi tomado, o timing, o estado na fronteira entre camadas). Instrumentação **mínima** (3–5 pontos que separam as hipóteses, não dezenas). O sender por linguagem, o lifecycle do server e o fallback de file-write estão em `references/runtime-capture.md`.
 
 **Persista o manifesto de limpeza** no report: o `DEBUG-<hash>`, os arquivos instrumentados, a porta do server e o caminho do `.jsonl`. É o que a F8 vai remover — sem ele, instrumentação órfã fica para sempre se a sessão cair.
-
-> Esta é a única fase em que o orquestrador escreve no código de produção (prints efêmeros, não lógica). A *leitura* de source continua delegada à F2; aqui você só insere os senders nos pontos que o digest da F2 já apontou.
 
 ### F4 — Reprodução + coleta (humano dispara / agente coleta)
 **Se a app precisa reiniciar para carregar a instrumentação** (servidor backend, build de front, processo long-running), peça o restart antes de reproduzir — o Cursor faz esse passo explícito ("restart the application and reproduce the bug"). Então faça o bug rodar e capture a evidência. **Quem dispara depende do repro:**
@@ -97,36 +98,55 @@ Com a hipótese confirmada pela evidência, isole a **causa raiz, não o sintoma
 
 Causa raiz clara e única → F6. Causa ambígua, ou "conserta num lugar e reaparece noutro" → sinal de hipótese errada → circuit breaker.
 
-### F6 — Fix cirúrgico (na raiz)
-O **menor fix que ataca a causa raiz** — uma correção precisa de duas ou três linhas, não centenas de linhas de código especulativo. Uma guarda na função compartilhada, não em cada caller. Respeite as invariantes enforced (F0/F5) e siga o padrão da camada, citando o doc do mapa (como `sdd:plan` faz: *"segue o error-handling de patterns/..."*). `[FAST-PATH]` reentra aqui.
+### F6 — Fix cirúrgico (na raiz, via fix-executor TDD)
+**O orquestrador comissiona um fix-executor por fix — não edita código no próprio contexto.** Um subagente fresco, obrigatório mesmo para um one-liner (`spawn a fix-executor anyway`). O briefing é **~500 tokens, self-contained, execution-ready, concrete enough to follow blind**: a causa raiz (F5), os arquivos a tocar, as invariantes enforced a respeitar (F0), o comando de teste do projeto (`docs/codebase/conventions/testing.md`), e o repro minimizado da F1 como ponto de partida do teste RED.
+
+O fix-executor roda o **loop estrito test-first idêntico ao `sdd:implement`** — `write the failing test, watch it fail, make it pass, refactor, commit`:
+1. **RED** — escreve o teste de regressão no seam certo, **RODA, e vê falhar.** O teste asserta **comportamento observável** (o valor certo, o evento emitido), não o mecanismo do fix. Se há spec, cita o REQ-ID violado.
+2. **GREEN** — só então o **menor fix que ataca a causa raiz** (duas ou três linhas, não código especulativo; uma guarda na função compartilhada, não em cada caller). **RODA, e vê passar.**
+3. **REFACTOR** — limpa, mantendo verde.
+4. **COMMIT** — atômico.
+
+O fix-executor **devolve a saída RED e a saída GREEN como prova** — o orquestrador cola ambas na seção "Prova TDD" do report. Sem RED antes do GREEN, o teste passou trivialmente e não prova nada.
 
 **Fronteira honesta:** se o fix exige mudança de arquitetura, é grande, ou cruza várias camadas → **não é um fix rápido, é uma feature/refactor.** Pare e recomende `sdd:spec`/`sdd:plan`. Debug não é a porta dos fundos para mudança grande sem spec.
 
-### F7 — Verificação (reproduzir de novo + teste de regressão)
-Dois passos, ambos obrigatórios:
-- **(7a) Re-rode o MESMO repro da F4** com o fix. A evidência de runtime que antes mostrava o bug agora mostra o comportamento certo. **Prova por reprodução, não por vibe.**
-- **(7b) Teste de regressão no seam certo.** Escreva um teste que **falha ANTES do fix e passa DEPOIS** (RED→GREEN — a mesma disciplina do `sdd:implement`). Local, nome e comando vêm de `docs/codebase/conventions/testing.md` (o contrato do projeto, não o seu gosto). Se há spec, o teste cita o REQ-ID que o bug violava. O teste deve asserir **comportamento observável** (o valor certo, o evento emitido), não o mecanismo do fix.
-  - **Escape honesto:** o default é escrever o teste — é o que diferencia "fix que volta semana que vem" de "fix provado". Mas se o bug é trivial num seam sem suíte, ou um one-liner óbvio onde o teste seria desproporcional, **registre a ausência como dívida explícita no report** em vez de fingir cobertura.
+### F7 — Verificação (absorvida em F6 e F8)
+A verificação não é mais uma fase de ação do orquestrador — ela se **dissolve nos gates delegados**: o **teste RED→GREEN** já foi provado pelo fix-executor na F6 (com a saída colada no report); a **re-reprodução do sintoma** é o primeiro passo do closing-gate na F8. Nada aqui o orquestrador roda no próprio contexto.
 
-### F8 — Limpeza (não-negociável, três gates)
-O Debug Mode termina deixando *"a clean, minimal change"*. Instrumentação esquecida é exatamente o lixo que o SDD odeia. Três passos, todos verificáveis, **nesta ordem**:
-1. **Mate o processo do debug server** (o do manifesto da F3).
-2. **Apague o `.jsonl`** de captura (`docs/debug/<slug>.jsonl`) — é evidência efêmera de runtime, não pertence ao git. (Apague-o *antes* do grep do passo 3, senão o grep acha o próprio `DEBUG-<hash>` dentro do `.jsonl` e o grep-zero nunca fecha.) O report `.md` **permanece** (registro durável da caça).
-3. **Remova os senders e prove com grep-zero:** apague cada sender E seu comentário-âncora dos arquivos do manifesto, então `grep -rn "DEBUG-<hash>" . --exclude-dir=docs/debug` (ou após o passo 2, sem o `.jsonl`, um `grep -rn` simples já basta) deve retornar **zero**. O hash único + o comentário-âncora tornam isso mecânico e completo. **Cheque também componentes aninhados** — um sender esquecido num branch que não rodou não aparece no `.jsonl`, mas aparece no grep; o grep-zero é a rede que pega isso. Shipar log de debug para produção é o acidente clássico do Debug Mode — o grep-zero existe para que ele não aconteça (se o projeto tiver um pre-commit hook, vale adicionar um guard contra `DEBUG-` no diff).
+- **Escape honesto do teste:** o default é o teste RED→GREEN da F6. Mas se o bug é trivial num seam sem suíte, ou um one-liner óbvio onde o teste seria desproporcional, **o fix-executor registra a ausência como dívida explícita no report** em vez de fingir cobertura — e o closing-gate sinaliza essa dívida no veredito.
 
-Feche o report (`status: resolvido`) e faça o **handoff**: sintoma → causa raiz (arquivo:linha) → evidência que provou → teste de regressão verde → server morto + grep-zero + `.jsonl` removido. Se a F5 viu que N callers compartilham o padrão, sinalize: *"a camada X tem o mesmo risco em N callers — vale `sdd:codebase diff` para registrar?"*
+### F8 — Fechamento + limpeza (gate duplo, inegociável)
+Esta é a fase que **faltou** nas execuções reais — a skill declarava resolvido sem provar que o sintoma sumiu. Agora o fechamento exige **prova técnica delegada E confirmação humana**, nenhuma das duas pulável.
+
+**(1) closing-gate subagent — a prova.** O orquestrador comissiona um subagente que **anda a matriz e devolve um veredito estruturado** (`the orchestrator commissions the proof and reads the verdict; it doesn't run the checks in its own context`). O closing-gate prova, nesta ordem:
+1. **Re-repro:** roda o **MESMO repro da F4** com o fix — a evidência que antes mostrava o bug agora mostra o comportamento certo. **Prova por reprodução, não por vibe.**
+2. **Teste verde:** o teste de regressão da F6 passa.
+3. **Limpeza com grep-zero:** mata o processo do debug server (manifesto F3) → **apaga o `.jsonl`** (`docs/debug/<slug>.jsonl`) *antes* do grep, senão o grep acha o próprio `DEBUG-<hash>` dentro do arquivo de captura → remove cada sender E seu comentário-âncora → `grep -rn "DEBUG-<hash>" .` retorna **zero**. Cheque também branches aninhados que não rodaram — o grep-zero é a rede que pega o sender órfão que o `.jsonl` não viu. (`the closing-gate removes the instrumentation and proves grep-zero; the orchestrator reads the verdict`.)
+
+O veredito volta como checklist: `re-repro OK / teste verde / grep-zero OK / server morto / .jsonl apagado`. Veredito vermelho em qualquer item → **não fecha**; volta à fase correspondente (re-repro falhou = hipótese errada → circuit breaker).
+
+**(2) Confirmação humana — o carimbo.** Com o veredito verde em mãos, o orquestrador pergunta ao humano via `AskUserQuestion`: *"o sintoma original que você reportou sumiu de fato?"*. **É a única pergunta de fechamento** (o humano só é consultado nas pontas: repro inicial na F1, confirmação aqui). Sem o "sim", o status fica `fix-aplicado`, não `resolvido`.
+
+**A skill não declara resolvido enquanto** o veredito do closing-gate estiver vermelho OU o humano não tiver confirmado (`won't declare resolved while the verdict is red or the human hasn't confirmed`). Só com **ambos** o report vira `status: resolvido`.
+
+Feche o report e faça o **handoff**: sintoma → causa raiz (arquivo:linha) → evidência que provou → teste verde (RED→GREEN colado) → closing-gate verde → confirmação humana. Se a F5 viu que N callers compartilham o padrão, sinalize: *"a camada X tem o mesmo risco em N callers — vale `sdd:codebase diff` para registrar?"*
 
 ## Divisão humano / agente
 
+O orquestrador **comissiona e sintetiza**; ele nunca lê source nem edita código no próprio contexto. Cada linha "subagente" abaixo é um briefing ~500 tokens, self-contained.
+
 | Trabalho | Quem | Por quê |
 |---|---|---|
-| Classificar o tipo, gerar hipóteses, escolher onde instrumentar | **Agente (orquestrador)** | é raciocínio sobre o digest |
-| Ler o source ao redor do sintoma, grep dos callers, ler spec/testing.md | **Subagente `Explore`** | mantém o contexto do orquestrador limpo (DNA SDD) |
+| Classificar o tipo, gerar hipóteses, escolher onde instrumentar, ler digests/veredictos, sintetizar | **Orquestrador** | é raciocínio sobre o digest — o único papel sem leitura/escrita de source |
+| Ler o source ao redor do sintoma, grep dos callers, ler spec/REQ/testing.md | **Subagente `Explore`** | mantém o contexto do orquestrador limpo (DNA SDD) |
+| Subir o server + injetar os senders de instrumentação | **Subagente `instrumentation-executor`** (mesmo tipo do fix-executor) | escrita em produção sai do orquestrador (R4) |
 | Disparar o repro na app real (login, estado manual, hardware) | **Humano** | o agente não tem as credenciais/o ambiente — o "back-and-forth" do Debug Mode |
-| Disparar repro roteirizável (teste, curl, `browser_navigate`) | **Agente** | determinístico, não precisa de humano |
-| Capturar o canal (`.jsonl` do server, Playwright) | **Agente** | "the agent handles the tedious work" |
+| Disparar repro roteirizável (teste, curl, `browser_navigate`) + capturar o `.jsonl`/Playwright | **Agente** | determinístico, "the agent handles the tedious work" |
 | Decidir se um comportamento é bug ou intencional | **Humano** (`AskUserQuestion`) | é julgamento de produto, não evidência |
-| Escrever o fix + o teste de regressão + limpar a instrumentação | **Agente** | é a execução cirúrgica |
+| Escrever o teste RED→GREEN + o fix + commitar | **Subagente `fix-executor`** | execução cirúrgica TDD; um por fix, fora do contexto do orquestrador |
+| Re-reproduzir + provar teste verde + limpar instrumentação + grep-zero | **Subagente `closing-gate`** | a prova é comissionada, não auto-executada |
+| Confirmar que o sintoma original sumiu | **Humano** (`AskUserQuestion`) | o fechamento não é decidido sozinho — carimbo final |
 
 ## Circuit breaker — pare antes de empilhar fixes
 
@@ -139,7 +159,9 @@ Sem o breaker, um agente "conserta" seis vezes, cada fix mascarando o anterior, 
 
 ## Artefato — um report leve e descartável
 
-Grave um bug report leve e incremental (~meia página) seguindo `templates/debug-report.template.md`. Local: `docs/specs/<feature>/debug-<slug>.md` se o bug está numa feature especificada (herda o contexto); senão `docs/debug/<slug>.md`. Ele nasce na F1/F2 (`status: investigando`), atualiza a cada fase, e fecha na F8 (`resolvido`).
+Grave um bug report leve e incremental (~meia página) seguindo `templates/debug-report.template.md`. Local: `docs/specs/<feature>/debug-<slug>.md` se o bug está numa feature especificada (herda o contexto); senão `docs/debug/<slug>.md`. **Crie-o já na F1/F2** (`status: investigando`) — não no fim. Ele percorre três estados: `investigando` → `fix-aplicado` (GREEN do fix-executor, mas closing-gate/humano ainda não confirmaram) → `resolvido` (só com closing-gate verde **e** confirmação humana).
+
+O report **é o state.md do debug** — não crie um arquivo de estado separado, ele já é o cursor de resumibilidade. Por isso: **reescreva-o no instante em que cada fase fecha — never append**, mantenha-o ~300–400 tokens. É um cursor, não um log; um diário que cresce perde a função. Se a sessão morre, o report no disco diz quais hipóteses já caíram, quais `DEBUG-<hash>` estão soltos, e em que estado o fix está — para não re-decidir o já decidido.
 
 **Por que persistir e não ficar só no chat:** o ganho concreto é **resumibilidade + o manifesto de limpeza**. Se a sessão morre na F4, o report no disco diz quais hipóteses já foram testadas e — crítico — quais `DEBUG-<hash>` estão soltos no código. Sem isso, instrumentação órfã fica para sempre.
 
@@ -151,7 +173,7 @@ Grave um bug report leve e incremental (~meia página) seguindo `templates/debug
 2. **Evidência de runtime, não adivinhação.** Instrumentação dirigida + captura real (server/Playwright/humano) em vez de "provavelmente é isso".
 3. **Causa raiz mecânica.** Grep obrigatório dos callers; fix na função compartilhada. O Claude cru conserta o caller nomeado e deixa os irmãos quebrados.
 4. **Não viola invariantes no fix.** Lê as invariantes enforced do `context.md`; o Claude cru "conserta" furando o lint e quebra o build.
-5. **Prova o fix.** Re-repro + teste RED→GREEN no seam. O Claude cru diz "deve estar resolvido".
+5. **Prova o fix — e a prova é comissionada, não auto-declarada.** closing-gate (re-repro + teste RED→GREEN + grep-zero) **mais** confirmação humana do sintoma. O Claude cru diz "deve estar resolvido"; aqui a sessão não fecha sem os dois.
 6. **Limpa atrás de si.** Grep-zero do `DEBUG-<hash>` + server morto + `.jsonl` removido. O Claude cru deixa `console.log` órfão no diff.
 7. **Circuit breaker.** Para e re-pensa em vez de empilhar fixes.
 8. **Resumível.** O report leve salva a caça e a limpeza se a sessão morrer.
@@ -161,11 +183,13 @@ Nas reviews do Debug Mode do Cursor, esse método pegou race conditions que pass
 
 ## O que esta skill não deve fazer
 
-- **Não corrigir sem evidência.** Sem hipótese confirmada por runtime, você está adivinhando (exceto `[FAST-PATH]`).
+- **Não corrigir sem evidência.** Sem hipótese confirmada por runtime, você está adivinhando. Sem exceção — não há fast-path.
+- **Não editar código no próprio contexto.** Comissione um fix-executor mesmo para um one-liner. O orquestrador lê digests e veredictos, não bytes de source.
+- **Não escrever o fix antes do teste vermelho.** Strict test-first: o fix-executor vê o RED falhar antes do GREEN. Teste escrito depois passa trivialmente e não prova nada.
+- **Não declarar resolvido sem o gate duplo.** Closing-gate verde (re-repro + teste + grep-zero) **E** confirmação humana do sintoma. Sem os dois, o status fica `fix-aplicado`.
 - **Não corrigir o sintoma.** Grep os callers; vá à raiz onde todos passam.
 - **Não virar feature.** Fix que exige arquitetura/cruza camadas → recomende `sdd:spec`/`sdd:plan`.
-- **Não deixar instrumentação para trás.** F8 é gate: grep-zero, server morto, `.jsonl` apagado.
-- **Não ler source no próprio contexto.** Delegue a `Explore`; fique com o digest.
+- **Não deixar instrumentação para trás.** O closing-gate prova grep-zero, server morto, `.jsonl` apagado.
 - **Não trocar de idioma** no meio. Trave do prompt inicial.
 - **Não empilhar tentativas.** 3 falhas → circuit breaker.
 
@@ -177,13 +201,14 @@ Nas reviews do Debug Mode do Cursor, esse método pegou race conditions que pass
 | Ler meia mensagem de erro e teorizar | Leia o stack até o fim antes de hipotetizar — a solução costuma estar ali. |
 | Consertar o caller que o ticket nomeou | Grep todos os callers; o fix vai na função compartilhada (causa raiz, não sintoma). |
 | Instrumentar com logs genéricos | Cada log é dirigido por hipótese — imprime o que distingue H1 de H2. |
-| Ler source no contexto do orquestrador | Delegue a `Explore`; fique só com o digest e o grep dos callers. |
-| Declarar "deve estar resolvido" | (7a) re-rode o repro + (7b) teste RED→GREEN no seam do testing.md. Prova, não vibe. |
-| Esquecer `console.log`/senders no diff | F8 em ordem: mate o server, apague o `.jsonl`, então grep-zero do `DEBUG-<hash>` no código. |
+| "É um fix minúsculo, faço eu mesmo no meu contexto" | Spawn a fix-executor anyway — pure orchestrator, sem exceção nem pro one-liner. |
+| Orquestrador lê source / injeta sender / edita fix | Comissione: `Explore` lê, `instrumentation-executor` injeta, `fix-executor` edita, `closing-gate` limpa. O orquestrador lê o digest e o veredito. |
+| Escrever o fix e depois o teste | Strict test-first: write the failing test, watch it fail (RED), só então o fix, watch it pass (GREEN), refactor, commit. Cole RED e GREEN. |
+| Declarar resolvido porque o teste passou | closing-gate prova re-repro + grep-zero, **E** o humano confirma que o sintoma sumiu. Sem os dois, status fica `fix-aplicado`. |
+| Esquecer `console.log`/senders no diff | O closing-gate, em ordem: mata o server, apaga o `.jsonl`, então grep-zero do `DEBUG-<hash>` no código. |
 | Grep-zero nunca fecha | Apague o `.jsonl` antes do grep — senão ele acha o próprio tag dentro do arquivo de captura. |
 | Empilhar um 4º fix na mesma direção | 3 falhas → pare, re-hipotetize a premissa, escale com o report. |
 | "Consertar" violando uma invariante enforced | Cheque a tabela do `context.md`; o fix respeita o boundary, não o fura. |
-| Burocratizar um typo com 8 fases | `[FAST-PATH]`: causa óbvia e localizada no stack → direto ao fix + verificação. |
 | Recusar porque falta o mapa | Debug é emergencial — degrade para ungrounded, avise, e declare o risco no report. |
 | Transformar o debug numa feature sem spec | Fix grande/arquitetural → fronteira honesta: recomende `sdd:spec`/`sdd:plan`. |
 | Instrumentar no escuro um bug que não reproduz | Se não reproduz sob instrumentação (intermitente, só-produção, memory leak, hardware), diga ao humano e mude de abordagem — é a limitação central do método. |

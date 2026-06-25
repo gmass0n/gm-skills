@@ -2,6 +2,8 @@
 
 O Debug Mode troca palpite por evidência. Esta é a mecânica de como obter essa evidência no Claude Code: o debug server local (o canal padrão), os senders por linguagem, como automatizar o repro, e o Playwright para o que o log não vê.
 
+**Quem executa:** a injeção dos senders (F3) e a remoção deles (F8) são **comissionadas a subagentes** — o `instrumentation-executor` injeta, o `closing-gate` remove e prova grep-zero. O orquestrador nunca escreve esses senders no próprio contexto; ele passa este doc no briefing do subagente e lê o manifesto/veredito de volta. A mecânica abaixo é o que vai no briefing.
+
 ## Por que um debug server, e não `console.log`
 
 `console.log` em stdout é frágil: some num worker, num processo filho, no SSR, num container, num lambda local; é texto não-estruturado que você fareja com grep; e te força a olhar o terminal *certo*. O Cursor resolve isso com um debug server numa extensão — a instrumentação faz um `POST localhost` e o server agrega tudo. Replicamos isso com `scripts/debug-server.js`:
@@ -28,7 +30,7 @@ rm docs/debug/<slug>.jsonl      # 2. apaga a captura ANTES do grep (senão o gre
 grep -rn "DEBUG-<hash>" .       # 3. prova grep-zero no código, depois de remover cada sender
 ```
 
-**Lifecycle disciplinado (a F8 depende disso):** o server sobe na F3, vive durante F4–F7, e morre na F8 — então o `.jsonl` é apagado e os senders removidos (grep-zero). **A ordem importa:** apague o `.jsonl` antes do grep-zero, senão o `grep` encontra o próprio `DEBUG-<hash>` dentro do arquivo de captura (é onde ele deve estar) e o grep-zero nunca fecha. Nada do server sobrevive ao fim do debug. Registre porta + pid + caminho do `.jsonl` no manifesto do report assim que subir.
+**Lifecycle disciplinado (o closing-gate da F8 depende disso):** o server sobe na F3, vive durante F4–F6, e morre no closing-gate (F8) — então o `.jsonl` é apagado e os senders removidos (grep-zero). **A ordem importa:** apague o `.jsonl` antes do grep-zero, senão o `grep` encontra o próprio `DEBUG-<hash>` dentro do arquivo de captura (é onde ele deve estar) e o grep-zero nunca fecha. Nada do server sobrevive ao fim do debug. Registre porta + pid + caminho do `.jsonl` no manifesto do report assim que subir.
 
 ## Senders por linguagem
 
@@ -74,7 +76,7 @@ O `DEBUG-<hash>` no `tag` é o que a F8 grepa para remover. Use o mesmo hash em 
 
 Reproduzir é pré-requisito de tudo. O repro *automatizado* é o que torna o resto mecânico — você roda quantas vezes quiser, sem depender do humano, e ele vira o teste de regressão depois. Tente do topo para baixo conforme o caso permitir:
 
-1. **Teste que falha no seam certo** — o melhor. Você já escreve o repro como um teste que fica vermelho; na F7 ele vira o próprio teste de regressão. Zero retrabalho.
+1. **Teste que falha no seam certo** — o melhor. O repro minimizado da F1 escrito como um teste vermelho **é** o teste RED do fix-executor na F6 — vira o próprio teste de regressão. Zero retrabalho.
 2. **Script HTTP / `curl`** no endpoint que dispara o bug — determinístico para bugs de API/backend.
 3. **CLI com snapshot diff** — rode o comando, capture a saída, compare com o esperado. Bom para fluxo silencioso (tipo c): o diff aponta onde divergiu.
 4. **Browser headless** via Playwright (`browser_navigate` + interações) — determinístico para bugs de UI/frontend.
