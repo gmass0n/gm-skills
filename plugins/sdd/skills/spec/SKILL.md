@@ -69,6 +69,14 @@ Two artifacts come out of the boundary question above:
 
 See `templates/spec.template.md` for the materialized block and a tagged-REQ example.
 
+## External contract — confirm it, never assume it
+
+**Condition: only when the feature integrates with or depends on an external API** (a payment gateway, an upstream service, a third-party SDK). Features with no external contract skip this entirely.
+
+An unconfirmed external contract that leaks forward as fact is one of the most expensive spec failures: the plan inherits a premise it can't verify cheaply and only discovers the lie when code fails. So before you close the spec, confirm the real endpoints, payload fields, and events against the official doc — dispatch a `WebFetch` (or `WebSearch`) so the raw doc bytes never pile into your context, and keep only the confirmed shape.
+
+`[UNVERIFIED]` is the standard mark for **any external contract detail you have not confirmed against a source** — a field, a route, a webhook event — not just SERU DTO fields. A REQ resting on an `[UNVERIFIED]` contract is valid in the spec, but the marker rides down to `sdd:plan`, which must confirm it before any code depends on it. The rule that protects the whole chain: **never state an external field/route/event as fact without a source.** If the doc doesn't confirm it, it's `[UNVERIFIED]` — a silent premise, not a verified contract.
+
 ## The clarification loop — the heart of this phase
 
 The danger with "always give a recommendation" is that an unanswered recommendation becomes a **silent decision**. The clarification loop is the guard against that: where the spec is underspecified, you **mark it, you do not guess.**
@@ -88,7 +96,7 @@ loop:
 
 So `spec.md` is the source of truth for clarification progress, not the conversation. This gives you resumability for free, and it's why the spec is always safe to leave half-finished.
 
-**Marker convention.** Use `[NEEDS CLARIFICATION: question]`. The repo already uses `[UNVERIFIED]` for unconfirmed SERU DTO fields — reuse that exact tag when the open question is "is this upstream contract real?", so the markers read consistently with code the team already writes.
+**Marker convention.** Use `[NEEDS CLARIFICATION: question]`. For unconfirmed external-contract details (any field/route/event not yet confirmed against a source — see "External contract" above) use `[UNVERIFIED]`, so the markers read consistently with code the team already writes and the plan knows to confirm before coding.
 
 ## Writing spec.md
 
@@ -149,6 +157,19 @@ Cadeia: LOC → CUS → BFF → POR
 
 A requirement that passes the coverage matrix but is untestable is a false green. As you write each REQ, sanity-check it: does it have a measurable, observable criterion? "baixa latência" is not testable; "p95 < 200ms" is. If a REQ has no measurable threshold, that's an ambiguity — mark it `[NEEDS CLARIFICATION: qual o número?]` rather than letting it through. This is the "unit test for English" applied per requirement, folded into the loop you already run — not a separate step.
 
+**When the spec has multiple composing time windows** (retry, grace period, expiry, timeout, TTL), sum them explicitly and validate the total against the user's intent before closing — sequential vs parallel changes the answer. Ask it plainly: "retry 7d + grace 5d — paralelos ou sequenciais? o teto até suspender é 8 ou 15 dias?". The act of adding them up is what catches a window silently stacked in series when the user meant it in parallel.
+
+## Validation diagram — draw it to find the gaps
+
+A diagram is a discovery tool, not decoration: the act of drawing the flow exposes missing transitions, orphan states, and badly composed time windows that prose hides (the 15-day timing bug above surfaced exactly this way). Draw an ASCII (or mermaid) diagram **whenever it helps validate the shared understanding**, walk it through *with the user* to close the picture before marking `ready`, and include it in `spec.md` as a reference the plan inherits.
+
+Pick the type by what the spec *is*:
+- **state diagram** — a lifecycle/status that transitions (subscription active → grace → suspended → cancelled).
+- **sequence diagram** — components/repos/services interacting over time (multi-repo chain, request → webhook → callback).
+- **flowchart** — a process with decisions and branches.
+
+Skip it for trivial specs (linear CRUD, no state) — YAGNI.
+
 ## Finishing — the handoff
 
 When the loop exits (zero clarifications, user confirms):
@@ -181,3 +202,6 @@ When the loop exits (zero clarifications, user confirms):
 | Leaving the spec contradictory after a new fact | Recompute the cascade — rewrite every dependent decision/REQ with a "substitui a decisão anterior" trace. |
 | Persisting an answer that contradicts a settled decision | Check each answer against the decision log first; surface the tension before writing it. |
 | Leaving the repo chain as prose in a multi-repo feature | Topology is the FIRST step: fill `## Repos envolvidos` (tag/slug/papel/branch/clonado + `Cadeia:`) and tag every REQ `(repo: <tag>)`, so the plan inherits it instead of re-deriving. |
+| Treating an unconfirmed external API contract as fact | Confirm it via official doc/`WebFetch`; whatever you can't confirm becomes `[UNVERIFIED]` and rides down to the plan — not a silent premise. |
+| Composing time windows without validating the total | Sum them and ask the user: do they compose in parallel or in series? Confirm the aggregate SLA (8 days vs 15 days is the difference). |
+| A state-machine spec with no diagram | Draw the states/transitions; it's where timing and transition gaps show up. Pick the type (state/sequence/flowchart) by what the spec is. |

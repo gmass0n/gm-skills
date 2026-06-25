@@ -63,6 +63,17 @@ Cadeia: LOC → CUS → BFF → POR
 - REQ-1: dado um pedido em "preparing", quando vira "ready", então o stream do operador recebe um evento `order.status` com o code em ≤2s.
 - REQ-2: dado operador desconectado, quando um pedido muda, então nenhuma notificação é enfileirada.
 
+## Diagrama de validação
+<OPCIONAL — só quando ajuda a validar o entendimento (lifecycle/máquina de estado,
+ fluxo multi-componente, processo com ramos). Trivial/CRUD linear: OMITA (YAGNI).
+ Tipo pelo que a spec é: estado (status que transiciona) / sequência (componentes no
+ tempo) / flowchart (processo com decisões). Desenhado COM o usuário antes de "ready".>
+```
+PENDING ──pagamento──> PAID
+   │                    │
+   └──expira(grace 5d)──┴──falha──> FAILED ──retry(7d)──> SUSPENDED ──30d──> CANCELLED
+```
+
 ## Fora de escopo
 <fecha a porta para scope creep. O que NÃO entra nesta feature.>
 - Notificação por push/e-mail.
@@ -86,6 +97,8 @@ Cadeia: LOC → CUS → BFF → POR
 - **REQ-IDs estáveis.** Sequenciais, nunca reusados. São a espinha da rastreabilidade — o plan e o implement referenciam por eles.
 - **Requisito é observável, não implementação.** "THE sistema SHALL emitir evento" (observável) — não "o SeruNotificationAdapter assina o stream" (isso é design, vai pro plan).
 - **Todo REQ tem critério de aceite mensurável.** Sem número/condição verificável → vira `[NEEDS CLARIFICATION]`, não passa.
+- **Contrato externo não-confirmado = `[UNVERIFIED]`.** Campo/rota/evento de API externa que você não confirmou na doc oficial entra marcado `[UNVERIFIED]` — vale na spec, mas o marcador desce pro plan confirmar antes de codar. Nunca afirme contrato externo como fato sem fonte.
+- **Janelas temporais que compõem: some e valide o total.** Retry + grace + expiração — pergunte ao usuário se são paralelos ou sequenciais e confirme o SLA agregado (8d vs 15d). Desenhe no "Diagrama de validação" para o gap aparecer.
 - **Decisões ≠ Clarificações.** Decisões = o que foi FECHADO no grill (o plan herda). Clarificações = o que está ABERTO (o plan espera). As duas seções são metades opostas do handoff.
 - **Multi-repo: topologia é artefato, não prosa.** `## Repos envolvidos` (tabela + `Cadeia:`) e o `(repo: <tag>)` em cada REQ nascem AQUI, na spec — o plan herda a topologia e deriva o `Repo:` de cada task do mapa REQ→repo, sem re-descobrir raiz/slug/branch/clone. Single-repo: seção omitida e REQs sem tag (spec byte-idêntica ao formato single-repo).
 - **Persistência incremental das clarificações.** O marcador entra nesta seção no instante em que a ambiguidade surge — não no fim. É o que torna a spec resumível se a sessão morrer.
