@@ -11,7 +11,7 @@
     {
       "name": "sdd",
       "source": "./plugins/sdd",
-      "description": "Spec-Driven Development workflow: codebase mapping, spec, plan and implement skills that prove every requirement is built and tested. Brownfield-first."
+      "description": "Spec-Driven Development workflow: codebase mapping, spec, plan, implement and debug skills that prove every requirement is built and tested. Brownfield-first."
     }
   ]
 }
