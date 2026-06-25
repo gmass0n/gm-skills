@@ -4,9 +4,22 @@ O Debug Mode troca palpite por evidência. Esta é a mecânica de como obter ess
 
 **Quem executa:** a injeção dos senders (F3) e a remoção deles (F8) são **comissionadas a subagentes** — o `instrumentation-executor` injeta, o `closing-gate` remove e prova grep-zero. O orquestrador nunca escreve esses senders no próprio contexto; ele passa este doc no briefing do subagente e lê o manifesto/veredito de volta. A mecânica abaixo é o que vai no briefing.
 
-## O debug server é o canal — SEMPRE, não `console.log`
+## Dois modos de captura: instrumentação injetada vs. inspeção direta
 
-A captura vai pelo debug server **em todos os casos**, sem atalho — mesmo num serviço local simples. `console.log` em stdout é frágil: some num worker, num processo filho, no SSR, num container, num lambda local; é texto não-estruturado que você fareja com grep; e te força a olhar o terminal *certo*. O Cursor resolve isso com um debug server numa extensão — a instrumentação faz um `POST localhost` e o server agrega tudo. Replicamos isso com `scripts/debug-server.js`:
+Há duas formas legítimas de obter runtime. Escolha pela natureza do ponto de observação, não por preguiça:
+
+**1. Instrumentação injetada (debug server) — quando o ponto de observação NÃO existe e você precisa criá-lo dentro do código.** Valor de variável interna, qual branch foi tomado, timing entre camadas, estado numa fronteira. Aí o sender com `// DEBUG-<hash>` POSTa pro debug server, a captura cai estruturada no `.jsonl`, e o grep-zero limpa. É o canal **obrigatório** para esse caso — `console.log` solto no stdout não serve (frágil, some no worker/SSR/container, órfão no diff).
+
+**2. Inspeção direta — quando o ponto de observação JÁ existe fora do código.** Não instrumente o que você consegue observar de fora:
+- **Frontend / request / render** → Playwright: `browser_network_requests` (o request/response/status real), `browser_console_messages`, `browser_evaluate`. A aba Network já é a evidência — anexe-a ao report.
+- **"Salvou de verdade?" / persistência** → query direta ao DB. O registro existe? com que valor? `updatedAt` mudou? É a prova mais forte de que o fluxo chegou ao fim — mais forte que um sender no meio do caminho.
+- **Estado já exposto** (`window.__x`, um header, um log que o serviço já escreve) → leia direto.
+
+Anexe a evidência da inspeção ao `.jsonl`/report como linha citável, igual ao sender. **A regra real não é "use o server sempre"; é "nenhum fix sem runtime que confirme a hipótese".** O pecado é deduzir da leitura do código e chamar de prova. Inspeção direta É runtime. O que segue é a mecânica do modo 1 (o server), porque é o que precisa de andaime; o modo 2 usa as ferramentas que você já tem.
+
+## O debug server — o canal da instrumentação injetada
+
+Quando o modo 1 se aplica, a captura vai pelo debug server, sem `console.log` solto. O Cursor resolve isso com um debug server numa extensão — a instrumentação faz um `POST localhost` e o server agrega tudo. Replicamos isso com `scripts/debug-server.js`:
 
 - **stdlib pura (`http`+`fs`), zero dependências, zero build.** Roda em qualquer projeto Node sem instalar nada. Para projetos não-Node, ele ainda serve: é um endpoint HTTP agnóstico, e o sender (em Python, Go, etc.) só precisa fazer um POST.
 - **Captura estruturada.** Cada POST vira 1 linha JSON em `docs/debug/<slug>/session.jsonl` (a pasta da sessão criada na F0; o `report.md` é irmão dele). `{tag, hyp, var, value, file, line}` é parseável; você lê o arquivo e cruza com as hipóteses sem adivinhar.
