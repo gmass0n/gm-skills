@@ -1,0 +1,35 @@
+# TEMPLATE — status-report.txt
+# Render in the user's language (PT-BR prompt -> PT-BR report, EN -> EN). Translate the
+# fixed labels below to match. Bold is WhatsApp-style single-asterisk *like this*; in a
+# plain-text email client the * will show literally — that is expected and accepted.
+# Keep full accentuation. Status emoji: ✅ Resolved | 🔧 In progress | ⛔ Blocked.
+# Drop any metadata line that does not apply. Keep section headers only when they have content.
+# Remove every comment line (starting with #) from the final file.
+
+📄 Status Report — <SHORT_TITLE>
+
+- *Status*: <STATUS_EMOJI> <STATUS_LABEL>            # e.g. ✅ Resolvido (com plano de prevenção em andamento)
+- *Data*: <DATE>                                     # DD/MM/YYYY
+- *Integração afetada*: <SCOPE>                      # what/who is affected; rename label to fit the domain
+- *Demais integrações*: <UNAFFECTED>                 # optional — what is explicitly NOT affected
+
+*<WHAT_HAPPENED_HEADER>?*                            # e.g. "O que aconteceu?" / "What happened?"
+
+<WHAT_HAPPENED>
+# Plain-language narrative: the symptom as the audience experienced it, then the root cause
+# explained for a non-technical reader. Call out anything counterintuitive ("only Bradesco
+# uses this kind of certificate; the others kept working").
+
+*<WHY_PARTIAL_HEADER>?*                              # optional section — explains nuance, e.g. why only some cases were hit
+                                                     # Remove the whole section if there is no such nuance.
+<WHY_PARTIAL>
+
+*<RESOLUTION_HEADER>:*                               # "Resolução:" when resolved; "Próximos passos:" when in progress/blocked
+
+- <RESOLUTION_OR_NEXT_STEP_1>
+- <RESOLUTION_OR_NEXT_STEP_2>
+
+*<CURRENT_STATE_HEADER>:*                            # "Situação atual:"
+
+- <STATUS_EMOJI> <CURRENT_STATE_LINE_1>
+- <STATUS_EMOJI> <CURRENT_STATE_LINE_2>

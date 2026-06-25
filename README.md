@@ -24,6 +24,17 @@ tested. The fifth, `sdd:debug`, runs off that trail — callable any time someth
 
 Artifacts live in `docs/specs/<feature>/{spec.md, plan.md, state.md}`; the codebase map in `docs/codebase/`; debug reports in `docs/specs/<feature>/debug-<slug>.md` or `docs/debug/<slug>.md` (the runtime-capture `.jsonl` is ephemeral and removed on cleanup).
 
+### `status-report` — leadership-ready status reports
+
+Turns any fix, incident, or in-flight change into a polished, audience-agnostic status report — one document clear enough for leadership, support, and the customer at once — plus an optional enterprise action plan. It mines the current session and context first, interviews you one question at a time when the context is thin (never inventing facts), then renders the validated WhatsApp/email style (📄 title, `*bold*` metadata, status emoji ✅ 🔧 ⛔).
+
+| Output | When | Contains |
+| --- | --- | --- |
+| `status-report.txt` | always | Title, status, plain-language narrative of what happened + root cause, scope, resolution or next steps. |
+| `action-plan.txt` | on request / when prevention work is warranted | Root cause to treat, numbered actions (1️⃣) with 👤 owner and 🗓️ deadline, prioritized recommendation. |
+
+Reports follow the prompt's language (PT-BR → PT-BR, EN → EN) and land in `docs/status-reports/<slug>/`. On Claude it fans out three subagents (timeline+cause, evidence, action plan) and synthesizes; without subagents it degrades to the same work inline.
+
 ## Install
 
 ### Claude Code
@@ -31,6 +42,7 @@ Artifacts live in `docs/specs/<feature>/{spec.md, plan.md, state.md}`; the codeb
 ```
 /plugin marketplace add gmass0n/gm-skills
 /plugin install sdd@gm-skills
+/plugin install status-report@gm-skills
 ```
 
 ### OpenAI Codex
@@ -46,7 +58,7 @@ codex
 /plugins
 ```
 
-In `/plugins`: switch to the **gm-skills** marketplace tab, open **sdd**, choose **install**, then press **Space** to enable it. Codex installs into `~/.codex/plugins/cache/gm-skills/sdd/<version>/` and stores the enabled state in `~/.codex/config.toml`. (Codex has no `codex plugin install` subcommand — installation is done through `/plugins`.)
+In `/plugins`: switch to the **gm-skills** marketplace tab, open the plugin you want (**sdd** or **status-report**), choose **install**, then press **Space** to enable it. Codex installs into `~/.codex/plugins/cache/gm-skills/sdd/<version>/` and stores the enabled state in `~/.codex/config.toml`. (Codex has no `codex plugin install` subcommand — installation is done through `/plugins`.)
 
 Both runtimes read the **same** `plugins/sdd/skills/` — a skill is authored once and works in either. Claude Code resolves the plugin via `.claude-plugin/`; Codex via `.codex-plugin/` (manifest) and `.agents/plugins/marketplace.json` (marketplace). In Codex the skills surface through progressive disclosure (name + description first, full `SKILL.md` loaded on use); invoke a phase by intent (e.g. "map the repo", "spec out X", "plan this", "implement the plan", "debug this bug").
 
@@ -56,9 +68,14 @@ Both runtimes read the **same** `plugins/sdd/skills/` — a skill is authored on
 gm-skills/
 ├── .claude-plugin/marketplace.json   # Claude Code marketplace
 ├── .agents/plugins/marketplace.json  # Codex marketplace
-└── plugins/sdd/
-    ├── .claude-plugin/plugin.json    # Claude Code manifest
-    ├── .codex-plugin/plugin.json     # Codex manifest
-    └── skills/                       # shared — codebase / spec / plan / implement / debug
+└── plugins/
+    ├── sdd/
+    │   ├── .claude-plugin/plugin.json    # Claude Code manifest
+    │   ├── .codex-plugin/plugin.json     # Codex manifest
+    │   └── skills/                       # shared — codebase / spec / plan / implement / debug
+    └── status-report/
+        ├── .claude-plugin/plugin.json
+        ├── .codex-plugin/plugin.json
+        └── skills/                       # shared — status-report
 ```
 

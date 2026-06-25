@@ -12,6 +12,11 @@
       "name": "sdd",
       "source": "./plugins/sdd",
       "description": "Spec-Driven Development workflow: codebase mapping, spec, plan, implement and debug skills that prove every requirement is built and tested. Brownfield-first."
+    },
+    {
+      "name": "status-report",
+      "source": "./plugins/status-report",
+      "description": "Generate a polished, leadership-ready status report (and optional enterprise action plan) for any fix, incident or in-flight change — styled for WhatsApp/email, interviewing you one question at a time when context is thin."
     }
   ]
 }

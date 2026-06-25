@@ -14,6 +14,17 @@
         "installation": "AVAILABLE"
       },
       "category": "Productivity"
+    },
+    {
+      "name": "status-report",
+      "source": {
+        "source": "local",
+        "path": "./plugins/status-report"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Productivity"
     }
   ]
 }
