@@ -1,6 +1,6 @@
 ---
 name: spec
-description: "Use to turn a feature idea into a complete, unambiguous specification — Phase 1 (SPECIFY) of the SDD workflow, before any planning or code. Run a relentless one-question-at-a-time interview (grounded in docs/codebase/context.md), then write docs/specs/<feature>/spec.md with user stories, EARS requirements carrying stable REQ-IDs, acceptance criteria, out-of-scope, the interview's decisions, and any open clarifications. Trigger whenever the user wants to spec a feature, write requirements, capture what to build, or says \"spec out X\", \"let's define this feature\", \"what should this do\" — and always before sdd:plan. The interview will not finish while any ambiguity is unresolved, so the resulting spec is safe to plan against."
+description: "Use to turn a feature idea into a complete, unambiguous specification — Phase 1 (SPECIFY) of the SDD workflow, before any planning or code. Run a relentless one-question-at-a-time interview (grounded in docs/codebase/context.md AND the project's confirmed lessons — load lessons from docs/codebase/lessons/ to pre-empt known past failures), then write docs/specs/<feature>/spec.md with user stories tagged by priority [P0|P1|P2], EARS requirements carrying stable REQ-IDs, acceptance criteria, out-of-scope, the interview's decisions, and any open clarifications. Trigger whenever the user wants to spec a feature, write requirements, capture what to build, or says \"spec out X\", \"let's define this feature\", \"what should this do\" — and always before sdd:plan. The interview will not finish while any ambiguity is unresolved, so the resulting spec is safe to plan against."
 ---
 
 # SDD — Specify (Phase 1)
@@ -19,6 +19,8 @@ Read `docs/codebase/context.md` first. It gives you the stack, the enforced inva
 
 - If `docs/codebase/context.md` does not exist → tell the user the map is missing and recommend running `sdd:codebase` first. You can still proceed, but say the spec is ungrounded.
 - If it exists but a doc relevant to this feature looks stale (its `sources` paths changed since its `generated:` date) → recommend `sdd:codebase diff` before specifying, so you're not building on a false premise.
+
+**Load confirmed lessons — once, here, before the interview loop.** If `docs/codebase/lessons/` exists, run `node <sdd-implement-skill>/scripts/lessons.js list --status confirmed` a single time (the same place you read `context.md`, never inside the question loop) and carry the returned lessons as guidance: they are the project's distilled past failures (a missing guard, a contract that drifted, a weak test). Use them to ask sharper questions and pre-empt repeats. Each lesson may carry a `--scope`; best-effort, warn if a loaded scope matches no `CONCERN-NNN` or repo role in the map (the script can't validate scope — `docs/codebase/` is your map, not its). Only `confirmed` lessons load; the list is capped top-N by recurrence (the rest collapses to an overflow line) so the load stays cheap. See the implement skill's `references/lessons.md`.
 
 **Detect and lock the conversation language now.** Detect the language of the user's initiating prompt and save it. The effect splits: the entire interview, every question, and ALL live narration to the user use the detected language (Portuguese or English) — never mix languages or switch on the user who started the conversation. But **`spec.md` itself is always written in English**, regardless of the detected language. Record the choice in the spec's frontmatter (`lang: pt` or `lang: en`); `lang:` records the conversation/narration language only, not the file's language. `sdd:plan` reads it and never re-detects.
 
@@ -127,7 +129,8 @@ generated: <data>
 Chain: LOC → CUS → BFF → POR
 
 ## User stories
-- US-1: As a <persona>, I want <capability> so that <benefit>.
+<tag each US `[P0|P1|P2]`; each REQ inherits its US's priority (override per-REQ only if it differs); untagged = P1. The plan uses the priority to filter the mutation sensor's targets in sdd:implement (P0 only).>
+- US-1 [P0]: As a <persona>, I want <capability> so that <benefit>.
 
 ## Requirements (EARS, with REQ-IDs)
 <each requirement is testable and observable. EARS: WHEN/WHILE/IF ... THE system SHALL ...

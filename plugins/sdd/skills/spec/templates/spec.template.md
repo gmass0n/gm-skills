@@ -43,14 +43,20 @@ generated: <date>
 Chain: LOC → CUS → BFF → POR
 
 ## User stories
-- US-1: As a <persona>, I want <capability> so that <benefit>.
-- US-2: ...
+<each story carries a priority tag [P0|P1|P2]. P0 = critical (must ship, core value);
+ P1 = important (default); P2 = nice-to-have. A story with NO tag defaults to P1.
+ Each REQ inherits the priority of its US; override per-REQ only when it genuinely differs (REQ-3 [P1]).
+ The plan uses this priority downstream: sdd:implement's mutation sensor runs ONLY on P0 REQs.>
+- US-1 [P0]: As a <persona>, I want <capability> so that <benefit>.
+- US-2 [P1]: ...
 
 ## Requirements (EARS, with REQ-IDs)
 <EARS = Easy Approach to Requirements Syntax. Each REQ is observable and testable.
  Patterns: WHEN <trigger>, THE system SHALL <action>. / WHILE <state>, THE system
  SHALL <action>. / IF <condition>, THEN THE system SHALL <action>. REQ-IDs are stable
  and sequential — once assigned, a number is never reused.
+ Each REQ inherits its US's priority — no tag means it follows the US. Override only when it differs:
+ `- REQ-3 [P1]: …`. A REQ under no US (or an US with no tag) is P1 by default.
  Multi-repo: each REQ ends with (repo: <tag>) — the plan derives the task's Repo: field
  from this map, it doesn't guess. A REQ that crosses 2 repos becomes 2 REQs (one per repo), not 1 with 2 tags.
  Single-repo: no tag.>
@@ -94,6 +100,7 @@ PENDING ──payment──> PAID
 
 ## Filling rules
 
+- **Priority tag per user story.** Every US carries `[P0|P1|P2]`; each REQ inherits its US's priority (override per-REQ only when it differs). Untagged = `P1`. This is a real handoff field, not decoration: `sdd:implement`'s mutation sensor targets only P0 REQs, so a P0 marks "this requirement's test must be strong enough to kill a mutant".
 - **Stable REQ-IDs.** Sequential, never reused. They are the backbone of traceability — the plan and implement reference them by ID.
 - **A requirement is observable, not implementation.** "THE system SHALL emit event" (observable) — not "the SeruNotificationAdapter subscribes to the stream" (that's design, goes to the plan).
 - **Every REQ has a measurable acceptance criterion.** No verifiable number/condition → becomes `[NEEDS CLARIFICATION]`, doesn't pass.

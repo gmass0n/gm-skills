@@ -1,7 +1,7 @@
 {
   "name": "sdd",
-  "version": "0.8.0",
-  "description": "Spec-Driven Development workflow: codebase mapping, spec, plan, implement and debug skills that prove every requirement is built and tested. Brownfield-first.",
+  "version": "0.9.0",
+  "description": "Spec-Driven Development workflow: codebase mapping, spec, plan, implement and debug skills that prove every requirement is built and tested. Priority-tagged requirements, evidence-or-zero coverage, a P0 mutation/discrimination sensor, and a self-improving lessons memory. Brownfield-first.",
   "author": "Gabriel Masson",
   "repository": "https://github.com/gmass0n/gm-skills",
   "license": "MIT",

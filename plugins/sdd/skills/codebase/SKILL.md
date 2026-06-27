@@ -33,6 +33,8 @@ docs/codebase/
 └── concerns/            # tech debt, risks, fragile areas — one doc per risk area
 ```
 
+**Never touch `docs/codebase/lessons/`.** That subtree is owned by `sdd:implement` (its self-improving error memory — `lessons.json` + `lessons.md`), not by this skill. When mapping, generating, pruning orphans, or running full-mode's authoritative re-derivation, **exclude `docs/codebase/lessons/` entirely**: never read it as a map doc, never list it as an orphan, never delete it. It is data the implement phase writes, not part of the discovered doc set.
+
 `context.md` and `overview.md` are **always** generated. The six directories hold a *discovered* number of files — a small repo might have three patterns and two integrations; a large one, twenty patterns. **You do not invent directories or documents to fill the tree.** If a repo has no external integrations, `integrations/` gets one short note, not fabricated entries.
 
 **`context.md` replaces the old `docs/codebase/README.md` router** — it does the same routing job but is shaped for an agent (it also carries the enforced invariants and per-task loading pointers; see "context.md" below). There is no `docs/codebase/README.md`.
@@ -261,7 +263,7 @@ Each agent returns finished English markdown for its one file. **You** write the
 
 - **Handle agent failures first.** Some agents may fail, time out, or return junk (empty, wrong language, no real paths). For each, **re-dispatch that one doc once.** If it fails again, drop it from the doc plan and note it in the report — do **not** leave a half-written file and do **not** let `context.md` link to a doc that was not produced.
 - Write all (surviving) files to their paths under `docs/codebase/`. **Never write outside `docs/codebase/` — in particular, never touch the repo's root `README.md`.**
-- **Prune orphans (full mode).** List what already exists under `docs/codebase/` and delete any `*.md` not in the final doc plan — a previous run may have produced docs for patterns/integrations that no longer exist. A stale doc that `context.md` does not link is exactly the orphan this skill forbids; the skill must not create it. If an old `docs/codebase/README.md` exists from a prior mapper run, delete it — `context.md` replaces it.
+- **Prune orphans (full mode).** List what already exists under `docs/codebase/` and delete any `*.md` not in the final doc plan — a previous run may have produced docs for patterns/integrations that no longer exist. **Exclude `docs/codebase/lessons/` from this sweep** — it is `sdd:implement`'s data, never an orphan to prune. A stale doc that `context.md` does not link is exactly the orphan this skill forbids; the skill must not create it. If an old `docs/codebase/README.md` exists from a prior mapper run, delete it — `context.md` replaces it.
 - Confirm every file in the final doc plan exists (`test -e`).
 - Spot-check 2–3 cited file paths per doc actually exist — agents hallucinate paths.
 - **Verify `context.md`:** every line under "Enforced invariants" names a real mechanism at a real path (the rule is *enforced*, not just claimed); the "Per-task loading" pointers reference docs that exist; the core stays lean (~500 tokens). A vague invariant with no mechanism is the failure mode this section exists to prevent — fix or downgrade it.

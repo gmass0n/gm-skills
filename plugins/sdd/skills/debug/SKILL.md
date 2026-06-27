@@ -1,6 +1,6 @@
 ---
 name: debug
-description: "Hunt the root cause of a bug and apply a surgical fix — off the forward SDD track, triggerable at any time. Use whenever something BROKE: console error, stack trace, exception, on-screen/UI error, failing request, red test, wrong flow, wrong value/state, unexpected behavior, regression — or when the user says \"it's broken\", \"it's throwing an error\", \"debug this\", \"why doesn't this work\", \"fix this bug\", \"investigate this problem\". Adapts Debug Mode (Cursor-style) to Claude Code: reads docs/codebase/context.md to find the bug's layer and to avoid violating invariants in the fix, generates SEVERAL root-cause hypotheses BEFORE any correction, instruments the code with hypothesis-driven logs (unique prefix, removed at the end) that send evidence to a local debug server, collects real runtime (server + Playwright MCP for the browser, or the human reproducing) instead of guessing, isolates the cause, applies the smallest possible fix at the root (not at the symptom — grep the callers), verifies by reproducing again + a regression test, and CLEANS UP all the instrumentation. After 3 failed attempts, it stops and re-hypothesizes (circuit breaker). Works without the map (ungrounded mode), but is far more efficient with it. Do NOT use to build a new feature or a broad refactor — that's sdd:spec / sdd:plan / sdd:implement."
+description: "Hunt the root cause of a bug and apply a surgical fix — off the forward SDD track, triggerable at any time. Use whenever something BROKE: console error, stack trace, exception, on-screen/UI error, failing request, red test, wrong flow, wrong value/state, unexpected behavior, regression — or when the user says \"it's broken\", \"it's throwing an error\", \"debug this\", \"why doesn't this work\", \"fix this bug\", \"investigate this problem\". Adapts Debug Mode (Cursor-style) to Claude Code: reads docs/codebase/context.md to find the bug's layer and to avoid violating invariants in the fix, generates SEVERAL root-cause hypotheses BEFORE any correction, instruments the code with hypothesis-driven logs (unique prefix, removed at the end) that send evidence to a local debug server, collects real runtime (server + Playwright MCP for the browser, or the human reproducing) instead of guessing, isolates the cause, applies the smallest possible fix at the root (not at the symptom — grep the callers), verifies by reproducing again + a regression test, and CLEANS UP all the instrumentation. When the root cause was shared (N callers / a violated invariant), it records a grounded lesson into docs/codebase/lessons/ so the next spec/plan inherits it. After 3 failed attempts, it stops and re-hypothesizes (circuit breaker). Works without the map (ungrounded mode), but is far more efficient with it. Do NOT use to build a new feature or a broad refactor — that's sdd:spec / sdd:plan / sdd:implement."
 ---
 
 # SDD — Debug (root-cause hunt + surgical fix)
@@ -48,6 +48,8 @@ Each phase consumes what the previous one produced; you don't advance without it
 
 ### F0 — Grounding
 Read `context.md` (above), lock the language, and check whether the bug falls into an existing `docs/specs/<feature>/` (note it for F5 — knowing the *expected* behavior changes the fix). This is the only disk read the orchestrator does in its own context; everything else (source, specs, testing.md) goes via subagent.
+
+**Load confirmed lessons (cheap, optional).** If `docs/codebase/lessons/` exists, run `node <sdd-implement-skill>/scripts/lessons.js list --status confirmed` once here and carry the result into F2: a `root_cause` lesson from a past hunt (*"the shared X mapper drops nulls from upstream Y"*) is a **prior** that often becomes the first hypothesis — the project telling you where it has broken before. Confirmed-only, top-N capped, so the load stays tiny. See the implement skill's `references/lessons.md`.
 
 **Create the session folder now:** `docs/debug/<slug>/` — everything for the session lives here (the report `report.md` AND the capture `session.jsonl`), centralized in one place. In multi-repo, **the folder lives in the repo where the session started**; the capture from both repos converges into the same `session.jsonl` (the debug server is a single one). No loose `.md`/`.jsonl` at the root of `docs/debug/`.
 
@@ -157,6 +159,8 @@ The verdict comes back as a checklist: `re-repro OK / green test / grep-zero OK 
 
 Close the report and do the **handoff**: symptom → root cause (file:line) → evidence that proved it → green test (RED→GREEN pasted) → green closing-gate → human confirmation. If F5 saw that N callers share the pattern, flag it: *"layer X has the same risk in N callers — worth a `sdd:codebase diff` to record?"*
 
+**Record the lesson (only when it's a reusable pattern).** When the confirmed root cause was **shared** — F5 found N callers with the same bug, or the fix had to respect an enforced invariant the original code violated — write **one** `root_cause` lesson so the next `sdd:spec`/`sdd:plan` inherits it: `node <sdd-implement-skill>/scripts/lessons.js add --signal root_cause --lesson "<the pattern in one line>" --source <shared file:line> [--scope <CONCERN-NNN|role>]`. `--source` is mandatory (the shared seam the fix landed on). A **point bug with a single caller and no invariant in play writes nothing** — it's not a reusable lesson, and a clean hunt that found a one-off doesn't pollute the memory. This is the automatically-loaded, lighter-weight twin of the `sdd:codebase diff` suggestion above. Lessons land in the versioned `docs/codebase/lessons/`, never in the report. (Same script/grounding rules as `sdd:implement` — see its `references/lessons.md`.)
+
 ### F9 — Reopening ("it didn't work", the bug came back) — RE-ENTER the flow, don't turn into raw Claude
 
 **This is the phase where the skill fails most in practice.** The observed pattern: on the 1st run everything is followed to the letter; the human comes back and says *"it still doesn't work"* / *"the progress doesn't save"*; and the orchestrator **abandons the flow** — it starts editing code in its own context, stops doing TDD, stops instrumenting, and stacks reproduction attempts until the context blows up. This is the #1 anti-pattern of this skill. **When the human reopens, you are NOT on a new bug nor in a free mode: you re-enter the SAME flow, with the existing report as state.md.**
@@ -186,7 +190,7 @@ The orchestrator **commissions and synthesizes**; it never reads source nor edit
 | Trigger a backend repro whose auth lives in the browser (httpOnly cookie/session) | **Agent via Playwright** | the logged-in browser fires the request; `curl` fails without the token |
 | Decide whether a behavior is a bug or intentional | **Human** (`AskUserQuestion`) | it's a product judgment, not evidence |
 | Write the RED→GREEN test + the fix + commit | **`fix-executor` subagent** | surgical TDD execution; one per fix, outside the orchestrator's context |
-| Re-reproduce + prove green test + clean up instrumentation + grep-zero | **`closing-gate` subagent** | the proof is commissioned, not self-executed |
+| Re-reproduce + prove green test + clean up instrumentation + grep-zero + record a `root_cause` lesson when the cause was shared | **`closing-gate` subagent** | the proof is commissioned, not self-executed; the lesson is grounded at the shared seam |
 | Confirm the original symptom is gone | **Human** (`AskUserQuestion`) | closing isn't decided alone — final stamp |
 
 ## Circuit breaker — stop before stacking fixes
@@ -233,6 +237,7 @@ In the Cursor Debug Mode reviews, this method caught race conditions that passed
 - **Don't fix the symptom.** Grep the callers; go to the root where they all pass through.
 - **Don't turn into a feature.** A fix that requires architecture/crosses layers → recommend `sdd:spec`/`sdd:plan`.
 - **Don't leave instrumentation behind.** The closing-gate proves grep-zero, server dead, `.jsonl` deleted.
+- **Don't record a lesson for a one-off, or one without grounding.** A `root_cause` lesson is written only when the cause was shared (N callers / a violated invariant) and always carries `--source` (the shared seam). A point bug writes nothing — the lessons memory is for reusable patterns, not every fix.
 - **Don't switch language** mid-session. Lock it from the initial prompt.
 - **Don't stack attempts.** 3 failures → circuit breaker.
 
