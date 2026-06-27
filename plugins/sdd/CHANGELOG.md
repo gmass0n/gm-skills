@@ -3,6 +3,21 @@
 All notable changes to the `sdd` plugin are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions track `.claude-plugin/plugin.json`.
 
+## [0.10.0] — 2026-06-27
+
+New skill `sdd:review` — the enterprise-grade **local** code review of any target, filling the gap between `sdd:implement`'s intra-task Post-Gate Review and the remote-PR `prs-review`. Pure orchestration (the same anti-hallucination DNA as `implement`/`debug`); the only executable addition is `review.js` (Node, stdlib-only), verified by its own `--selftest`.
+
+### Added
+- **`sdd:review` — five targets, one architecture.** Reviews a diff (default — branch vs GitFlow merge-base, or `--staged`/`--working`/`A..B`), a file/dir/glob (whole content), a commit/range/tag, the whole repo (`--all`, with announced sampling), or a pasted snippet (`--paste`). All five are classified and resolved by `review.js resolve`, which emits the manifest (files + churn + layer + risk flag + base + excluded generated files). New skill dir `skills/review/` (SKILL.md + 2 references + 1 template + `scripts/review.js`). (`review`)
+- **Blind multi-lens dispatch with per-path slicing.** Five parallel, blind, fresh reasoning lenses (correctness, security incl. 401/logout, performance/N+1, architecture/DRY-SOLID-KISS-YAGNI + semantic-reimplementation detection, spec-alignment), each fed ONLY its `review.js slice` and a per-dimension "What NOT to flag" blocklist (Cloudflare's biggest FP reducer). Each returns findings as questions/hypotheses, never verdicts. New ref `review/references/review-lenses.md`. (`review`)
+- **Adversarial verification batched per file.** A fresh verifier reads each file once and tries to FALSIFY every finding against the real `file:Lline` + callers/contract; partial confidence downgrades blocker→warning + `confirmar:`; refuted findings go to "Considered and cleared"; a 2-vote confirmation is required only for a blocker; the `❓ q:` channel converges uncertainty before emit (the skill never interviews). New ref `review/references/verification-discipline.md`. (`review`)
+- **Executable gates + deterministic invariants + risk-gated mutation sensor.** Gates (test/typecheck/lint + test-count delta via `review.js testcount`) run in PARALLEL with the lenses; the enforced invariants (zero-`any`/no-hardcoded-strings/no-arbitrary-px) run as `grep`/`biome`, not an LLM lens; the mutation sensor fires only when the diff touches a risk file and reuses `implement/references/mutation-sensor.md` verbatim. (`review`)
+- **`review.js` — deterministic bookkeeping** (Node, stdlib `fs`+`path`+`child_process`, zero deps): `resolve`/`slice`/`extract-symbols`/`group-findings`/`tally`/`testcount`, with a `--selftest`. The LLM judges; the script resolves the target, slices per lens, groups findings per file, and counts severities for the machine-readable trailer (so counts never drift between runs). (`review`)
+- **Loop only for a new confirmed blocker (cap 2), bias-to-approve, machine-readable trailer.** Re-runs only when a new confirmed blocker appears (not "until dry" — CR-Bench: more iteration = more noise); only a confirmed blocker rejects (warnings/nits never block); the verdict lands in `docs/reviews/<slug>/review.md` with a `<!-- sdd-review-severity: … -->` trailer for CI. Ungrounded degradation (never refuses without the map); routes fixes to `sdd:debug`/`sdd:plan`/`sdd:spec` rather than applying them; reuses `implement/scripts/lessons.js` for the narrow lesson WRITE. New template `review/templates/review-report.template.md`. (`review`)
+
+### Changed
+- Plugin description (and the codex/marketplace mirrors) updated to surface `review` and its triggers for the router.
+
 ## [0.9.0] — 2026-06-27
 
 Four improvements ported from the tlc-spec-driven v3 analysis, plus the spec prerequisite they need.

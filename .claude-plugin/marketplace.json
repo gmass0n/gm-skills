@@ -11,7 +11,7 @@
     {
       "name": "sdd",
       "source": "./plugins/sdd",
-      "description": "Spec-Driven Development workflow: codebase mapping, spec, plan, implement and debug skills that prove every requirement is built and tested. Priority-tagged requirements, evidence-or-zero coverage, a P0 mutation/discrimination sensor, and a self-improving lessons memory. Brownfield-first."
+      "description": "Spec-Driven Development workflow: codebase mapping, spec, plan, implement, review and debug skills that prove every requirement is built and tested. Priority-tagged requirements, evidence-or-zero coverage, a P0 mutation/discrimination sensor, blind multi-lens local code review with adversarial verification, and a self-improving lessons memory. Brownfield-first."
     },
     {
       "name": "status-report",
