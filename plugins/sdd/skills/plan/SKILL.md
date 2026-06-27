@@ -30,7 +30,7 @@ Before doing anything, check the spec:
 You are the **orchestrator** of this phase. You don't read the codebase into your own context — you dispatch subagents to analyze, and you synthesize their returns into `plan.md`. The synthesis (design, tasks, matrix, batches) is yours; the reading is delegated. This keeps your context lean and is the main token win of the phase: raw file bytes and doc dumps stay in the subagents.
 
 What goes to subagents, run in **parallel** when independent:
-- **Reading the codebase map** — one `Explore` subagent loads the docs `context.md`'s "Loading per task" names for this feature (selective — not all 30) and returns the patterns, layer rules, and **enforced invariants** as a digest.
+- **Reading the codebase map** — one `Explore` subagent loads the docs `context.md`'s "Loading per task" names for this feature (selective — not all 30) and returns the patterns, layer rules, and **enforced invariants** as a digest. **In the same subagent, on a large feature, also run `node <sdd-implement-skill>/scripts/lessons.js list --status confirmed`** if `docs/codebase/lessons/` exists, and fold the confirmed lessons (capped top-N by recurrence) into the digest — the project's distilled past failures, so the design pre-empts a known repeat. Don't open a second subagent for it; it rides along with the map read.
 - **Investigating specific files** — the exact signatures, line ranges, and snippets each task's Steps will need. This is the analysis that gets *cached as Steps* so `sdd:implement` never re-analyzes.
 - **Confirming external APIs** — a subagent uses Context7 to verify current library APIs rather than you guessing.
 

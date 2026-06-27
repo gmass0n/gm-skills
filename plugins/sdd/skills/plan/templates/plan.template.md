@@ -66,9 +66,12 @@ generated: <date>
  it's computed on TWO axes: file collision (intra-repo) + contract barrier (cross-repo).
  The plan records the result in the Batch field.
 
- The metadata fields (Source/Repo/Depends on/Files/Verification/Batch) are the parseable CONTRACT.
+ The metadata fields (Source/Repo/Priority/Depends on/Files/Verification/Batch) are the parseable CONTRACT.
  `Repo:` = repo TAG (LOC/BFF...), inherited from the spec's REQ→repo map; trivial/omitted single-repo.
  `sdd:implement` reads `Repo:` to pick the worktree where the task runs.
+ `Priority:` = the highest priority among the task's Source REQs (P0/P1/P2), inherited from the spec —
+ NOT decided here. `sdd:implement`'s closing-gate mutation sensor runs only on P0 tasks. Omit only if every
+ Source REQ is untagged (defaults to P1).
  The Steps below them are the execution SCRIPT: the implement subagent only follows them, it doesn't decide.
  Each task starts with a failing test and ends in an atomic commit — TDD, no exception.
 
@@ -78,6 +81,7 @@ generated: <date>
 
 ### T-1
 - Source: REQ-2
+- Priority: P1
 - Depends on: —
 - Files: src/modules/notification/domain/ports/notification-gateway.port.ts, src/.../tests/notification-gateway.port.spec.ts
 - Verification: test `should expose stream contract` covers the REQ-2 criterion
@@ -90,6 +94,7 @@ generated: <date>
 
 ### T-2  [!]
 - Source: REQ-1, REQ-3
+- Priority: P0
 - Depends on: T-1
 - Files: src/modules/notification/infrastructure/seru/seru-notification.adapter.ts, src/.../tests/seru-notification.adapter.spec.ts
 - Verification: test `should emit order.status on change` covers the REQ-1 criterion; `should auto-reconnect on drop` covers REQ-3
@@ -131,13 +136,18 @@ generated: <date>
 ## Coverage matrix (REQ → task → test)
 
 <the spine of the proof chain. EVERY REQ from the spec appears here with ≥1 task and ≥1 test.
- If any REQ is left uncovered, the plan FAILS and lists the gap — it doesn't proceed.>
+ If any REQ is left uncovered, the plan FAILS and lists the gap — it doesn't proceed.
+ The `Assertion` column names the assertion expression that proves the REQ's outcome — the literal
+ `expect(...)` (or equivalent) the test asserts, not a paraphrase. It's what sdd:implement's closing
+ gate anchors against: a REQ whose row has no locatable assertion is treated as UNCOVERED, and an
+ assertion that doesn't match the AC's outcome is a `⚠️ spec-precision gap`. May be "(filled at implement)"
+ if the exact expression isn't known until the test is written — but the gate then demands it before passing.>
 
-| REQ   | Tasks    | Test(s) that prove it                     |
-|-------|----------|-------------------------------------------|
-| REQ-1 | T-2      | should emit order.status on change        |
-| REQ-2 | T-1      | should expose stream contract             |
-| REQ-3 | T-2      | should auto-reconnect on drop             |
+| REQ   | Tasks    | Test(s) that prove it              | Assertion                                  |
+|-------|----------|------------------------------------|--------------------------------------------|
+| REQ-1 | T-2      | should emit order.status on change | `expect(event.code).toBe('order.status')`  |
+| REQ-2 | T-1      | should expose stream contract      | `expect(port.streamStatus).toBeDefined()`  |
+| REQ-3 | T-2      | should auto-reconnect on drop      | `expect(reconnectSpy).toHaveBeenCalled()`  |
 
 ## Concern remediation (optional, opt-in)
 
@@ -161,6 +171,8 @@ generated: <date>
 - **`Verification` names the test** that covers a spec acceptance criterion. Without a named test, the task is outside the proof chain.
 - **`[!]` is marked; `[P]`/`Batch` is computed on two axes.** Criticality you decide (heuristic + dev override). Parallelizability comes from TWO orthogonal axes: **file collision (intra-repo)** — `Files` intersection + hot list (`*.module.ts`, `env.schema.ts`, contracts); and **contract barrier (cross-repo)** — tasks in different repos are `[P]` to implement IF the `## Cross-repo interface contract` is frozen, otherwise serial. Single-repo only has the file axis. Cross-repo `[P]` still carries `Depends on:` the producer (merge order ≠ implementation order). The result becomes the `Batch`.
 - **`Repo:` is inherited, not decided.** Comes from the spec's REQ→repo map. Repo TAG (LOC/BFF...). Single-repo: trivial/omitted. `sdd:implement` uses it to pick the worktree.
+- **`Priority:` is inherited, not decided.** The task's priority is the highest among its Source REQs (P0 wins over P1 over P2), carried up from the spec's US/REQ tags. It exists for one downstream consumer: `sdd:implement`'s mutation sensor runs only on P0 tasks. Don't invent a priority the spec didn't set; untagged REQs default to P1.
+- **The matrix `Assertion` column is the evidence anchor.** Each REQ row names the literal assertion expression that proves its outcome — what the closing gate locates `file:line` and matches against the AC. A row with no assertion is an uncovered REQ to the gate; an assertion that doesn't match the AC's outcome is a spec-precision gap. Use "(filled at implement)" only when the exact expression genuinely can't be known yet.
 - **Cross-repo contract is mandatory multi-repo.** The `## Cross-repo interface contract` block freezes name+type of each field that crosses the chain. Omitted entirely single-repo.
 - **`L-0` opens every multi-repo feature.** 1 task/repo from the registry: clone if absent → worktree+branch off the repo's base → commit scaffold → push → draft PR. Deterministic (base/title from the registry). Single-repo doesn't have one.
 - **Complete matrix is a gate.** Every REQ from the spec → a row in the matrix with a task + test. Missing one → plan FAILS, lists the gap, stops.
