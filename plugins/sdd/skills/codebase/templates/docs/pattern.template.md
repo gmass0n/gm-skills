@@ -1,48 +1,48 @@
-# Archetype: `patterns/<padrão>.md`
+# Archetype: `patterns/<pattern>.md`
 
-Um documento por **padrão tático recorrente** — evidenciado por **≥2 ocorrências** no código. Um arquivo único não é um padrão; não documente.
+One document per **recurring tactical pattern** — evidenced by **≥2 occurrences** in the code. A single file is not a pattern; don't document it.
 
-Exemplos de padrões: entity, value-object, mapper, facade, dependency-injection, error-handling, env-validation, helper, controller fino, comando CLI, scope-validation, module-wiring.
+Examples of patterns: entity, value-object, mapper, facade, dependency-injection, error-handling, env-validation, helper, thin controller, CLI command, scope-validation, module-wiring.
 
-## Idioma e forma
+## Language and shape
 
-PT-BR. Identificadores, caminhos e nomes de lib verbatim.
+English. Identifiers, paths and library names verbatim.
 
-## Estrutura do doc
+## Doc structure
 
 ```markdown
-# <Nome do padrão> Pattern
+# <Pattern name> Pattern
 
-## Regra-de-ouro
-<A invariante do padrão em 1–3 frases. Para mapper: "Mappers vivem em `mappers/`
-dentro da camada de I/O, são classes com métodos estáticos, sem estado, sem DI.
-Cross-boundary é proibido.">
+## Golden rule
+<The pattern's invariant in 1–3 sentences. For mapper: "Mappers live in `mappers/`
+inside the I/O layer, are classes with static methods, stateless, no DI.
+Cross-boundary is forbidden.">
 
-## <Métodos/forma canônica>   (quando o padrão tem uma API recorrente)
-<Tabela ou lista da convenção: nomes de método por intenção, assinatura típica,
-onde cada um aparece.>
+## <Methods/canonical form>   (when the pattern has a recurring API)
+<Table or list of the convention: method names by intent, typical signature,
+where each one appears.>
 
-## Exemplo(s)
-<Um ou mais trechos de código REAL com `// caminho`. Se o padrão aparece em
-contextos diferentes (ex.: mapper HTTP vs mapper Mongoose vs mapper JWT), mostre
-um de cada. Logo abaixo, "Observe:" com os pontos que o exemplo prova.>
+## Example(s)
+<One or more REAL code excerpts with `// path`. If the pattern appears in
+different contexts (e.g. HTTP mapper vs Mongoose mapper vs JWT mapper), show
+one of each. Right below, "Note:" with the points the example proves.>
 
-## <Enforcement>   (quando há lint/types/CI que impõe)
-<Trecho real da regra. Cross-linke para o conventions doc.>
+## <Enforcement>   (when a lint/types/CI enforces it)
+<Real snippet of the rule. Cross-link to the conventions doc.>
 
-## Anti-padrões
-<Lista com ❌. Cada um é uma tentação real que viola o padrão.>
+## Anti-patterns
+<List with ❌. Each one is a real temptation that violates the pattern.>
 ```
 
-## Onde olhar no repo
+## Where to look in the repo
 
-- `grep`/`rg` por nome do padrão ou por sufixo de arquivo (`*.mapper.ts`, `*.vo.ts`, `*.handler.ts`).
-- Confirme ≥2 ocorrências antes de criar o doc.
-- A lint rule que governa o padrão (composição cross-boundary, instanciação proibida, etc).
+- `grep`/`rg` by the pattern name or by file suffix (`*.mapper.ts`, `*.vo.ts`, `*.handler.ts`).
+- Confirm ≥2 occurrences before creating the doc.
+- The lint rule that governs the pattern (cross-boundary composition, forbidden instantiation, etc).
 
-## Regras
+## Rules
 
-- O exemplo é a documentação. Prosa sem código não prova o padrão.
-- "Observe:" depois do código transforma o exemplo em ensino — liste o que o trecho prova (sem `new`, sem DI, composição só dentro do boundary, etc).
-- Se o padrão tem variações por contexto, mostre uma de cada — é o que evita o leitor generalizar errado.
-- Cross-linke para o `layers/*.md` da camada que hospeda o padrão e para o `conventions/*` que o impõe.
+- The example is the documentation. Prose with no code doesn't prove the pattern.
+- "Note:" after the code turns the example into teaching — list what the excerpt proves (no `new`, no DI, composition only inside the boundary, etc).
+- If the pattern has context variations, show one of each — that's what stops the reader from over-generalizing.
+- Cross-link to the `layers/*.md` of the layer that hosts the pattern and to the `conventions/*` that enforces it.

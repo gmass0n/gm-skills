@@ -1,102 +1,102 @@
 # Template: `plan.md`
 
-O contrato de **HOW** de uma feature: design + tasks num único arquivo, em `docs/specs/<feature>/plan.md`. É o que o `sdd:implement` executa — então o formato das tasks, da matriz e dos lotes É um contrato, parseado por máquina. Este template é a fonte de verdade desse formato.
+The **HOW** contract of a feature: design + tasks in a single file, at `docs/specs/<feature>/plan.md`. It's what `sdd:implement` executes — so the format of the tasks, the matrix, and the batches IS a contract, machine-parsed. This template is the source of truth for that format.
 
-## Idioma
+## Language
 
-Herdado do `spec.md` (`lang:` no frontmatter). Não re-detectar.
+Files are always written in English. Live narration to the user inherits `lang:` from `spec.md` (`lang:` in the frontmatter) — `lang:` records the conversation language; it never changes file content. Do not re-detect.
 
-## Estrutura
+## Structure
 
 ```markdown
 ---
 title: <feature>
-lang: pt | en              # herdado da spec
-status: draft | ready      # "ready" só com matriz completa E zero [ANALYSIS] aberto
+lang: pt | en              # inherited from spec
+status: draft | ready      # "ready" only with a complete matrix AND zero open [ANALYSIS]
 spec: ./spec.md
-generated: <data>
+generated: <date>
 ---
 
 # Plan: <feature>
 
-> **Para os executores (sdd:implement):** cada task é executada por um subagente fresco que apenas SEGUE os Steps abaixo, em ordem, sem analisar a codebase — toda a análise já foi feita aqui. Steps usam checkbox (`- [ ]`) e seguem TDD: RED → GREEN → REFACTOR → COMMIT.
+> **For the executors (sdd:implement):** each task is executed by a fresh subagent that only FOLLOWS the Steps below, in order, without analyzing the codebase — all the analysis was already done here. Steps use checkboxes (`- [ ]`) and follow TDD: RED → GREEN → REFACTOR → COMMIT.
 
-**Goal:** <o que esta feature entrega, em 1-2 frases. Inclui bug colateral corrigido, se houver.>
+**Goal:** <what this feature delivers, in 1-2 sentences. Include any collateral bug fixed, if there is one.>
 
-**Architecture:** <a abordagem técnica em 1-3 frases: o pipeline/fluxo que a mudança percorre e os padrões reais que segue.>
+**Architecture:** <the technical approach in 1-3 sentences: the pipeline/flow the change goes through and the real patterns it follows.>
 
-**Tech Stack:** <stack relevante à feature — ex: NestJS, TypeScript, CQRS, TypeORM, Jest.>
+**Tech Stack:** <stack relevant to the feature — e.g. NestJS, TypeScript, CQRS, TypeORM, Jest.>
 
 ---
 
 ## Design
 
-### Visão da solução
-<como a spec é satisfeita, em termos técnicos. 3-5 frases.>
+### Solution overview
+<how the spec is satisfied, in technical terms. 3-5 sentences.>
 
-### Ancoragem no codebase
-<os padrões reais que este design segue, por caminho. Brownfield: conforma, não reinventa.>
-- Segue o adapter de [integrations/seru-client.md](../../codebase/integrations/seru-client.md)
-- Respeita a regra de camada de [layers/presentation-layer.md](../../codebase/layers/presentation-layer.md)
+### Codebase anchoring
+<the real patterns this design follows, by path. Brownfield: conform, don't reinvent.>
+- Follows the adapter from [integrations/seru-client.md](../../codebase/integrations/seru-client.md)
+- Respects the layer rule from [layers/presentation-layer.md](../../codebase/layers/presentation-layer.md)
 
-### Componentes e fluxo
-<o que muda/nasce, onde vive, e o caminho ponta a ponta. Cada decisão → REQ-id.>
-- `SeruNotificationAdapter.streamStatus()` — assina o stream upstream → REQ-1, REQ-3
-- Sem persistência (stream stateless) → REQ-2
+### Components and flow
+<what changes/is born, where it lives, and the end-to-end path. Each decision → REQ-id.>
+- `SeruNotificationAdapter.streamStatus()` — subscribes to the upstream stream → REQ-1, REQ-3
+- No persistence (stateless stream) → REQ-2
 
 ### Trade-offs
-<as escolhas técnicas e por quê. Herda as "Decisões e restrições" da spec.>
-- SSE em vez de WebSocket: unidirecional basta (REQ-1), menos infra. (decisão D-1 da spec)
+<the technical choices and why. Inherits the "Decisions and constraints" from the spec.>
+- SSE instead of WebSocket: unidirectional is enough (REQ-1), less infra. (decision D-1 from spec)
 
-## Contrato de interface entre repos
+## Cross-repo interface contract
 
-<SÓ multi-repo. Omitir inteiro quando a feature toca um único repo.
- CONGELA o shape do dado que atravessa a cadeia (`Cadeia:` da spec): nome + tipo de cada campo,
- quem PRODUZ e quem CONSOME. É o que destrava o paralelismo — cada repo mocka contra este shape
- e implementa sozinho, sem precisar do outro NO AR. Herda `## Repos envolvidos` e a `Cadeia:` da spec.>
+<ONLY multi-repo. Omit entirely when the feature touches a single repo.
+ FREEZES the shape of the data that crosses the chain (`Chain:` from the spec): name + type of each field,
+ who PRODUCES and who CONSUMES. It's what unlocks the parallelism — each repo mocks against this shape
+ and implements alone, without needing the other one LIVE. Inherits `## Repos involved` and the `Chain:` from the spec.>
 
-| Campo | Tipo | Produz | Consome |
-|-----------|---------------|--------|------------|
-| latitude  | number\|null  | LOC    | BFF, portal |
-| longitude | number\|null  | LOC    | BFF, portal |
+| Field     | Type          | Produces | Consumes    |
+|-----------|---------------|----------|-------------|
+| latitude  | number\|null  | LOC      | BFF, portal |
+| longitude | number\|null  | LOC      | BFF, portal |
 
 ## Tasks
 
-<cada task é atômica. T-<n> estável. [!] = crítica (lote solo). [P] NÃO se declara aqui —
- é computado em DOIS eixos: colisão de arquivo (intra-repo) + barreira de contrato (cross-repo).
- O plan registra o resultado no campo Lote.
+<each task is atomic. T-<n> stable. [!] = critical (solo batch). [P] is NOT declared here —
+ it's computed on TWO axes: file collision (intra-repo) + contract barrier (cross-repo).
+ The plan records the result in the Batch field.
 
- Os campos de metadados (Origem/Repo/Depende de/Arquivos/Verificação/Lote) são o CONTRATO parseável.
- `Repo:` = TAG do repo (LOC/BFF...), herdada do mapa REQ→repo da spec; trivial/omitido single-repo.
- O `sdd:implement` lê `Repo:` para escolher o worktree onde a task roda.
- Os Steps abaixo deles são o ROTEIRO de execução: o subagente do implement só os segue, não decide.
- Cada task começa com um teste failing e termina num commit atômico — TDD, sem exceção.
+ The metadata fields (Source/Repo/Depends on/Files/Verification/Batch) are the parseable CONTRACT.
+ `Repo:` = repo TAG (LOC/BFF...), inherited from the spec's REQ→repo map; trivial/omitted single-repo.
+ `sdd:implement` reads `Repo:` to pick the worktree where the task runs.
+ The Steps below them are the execution SCRIPT: the implement subagent only follows them, it doesn't decide.
+ Each task starts with a failing test and ends in an atomic commit — TDD, no exception.
 
- Regra dos Steps: SEMPRE checkbox + arquivo + comando de verificação. Trecho de código embutido
- SÓ quando o edit é não-óbvio (uma assinatura nova, um spread condicional, um SQL). Edit trivial
- (adicionar um campo a um DTO) descreve-se em uma linha, sem bloco de código.>
+ Steps rule: ALWAYS checkbox + file + verification command. Embedded code snippet
+ ONLY when the edit is non-obvious (a new signature, a conditional spread, a SQL). A trivial edit
+ (adding a field to a DTO) is described in one line, no code block.>
 
 ### T-1
-- Origem: REQ-2
-- Depende de: —
-- Arquivos: src/modules/notification/domain/ports/notification-gateway.port.ts, src/.../tests/notification-gateway.port.spec.ts
-- Verificação: teste `should expose stream contract` cobre o critério de REQ-2
-- Lote: L-1
+- Source: REQ-2
+- Depends on: —
+- Files: src/modules/notification/domain/ports/notification-gateway.port.ts, src/.../tests/notification-gateway.port.spec.ts
+- Verification: test `should expose stream contract` covers the REQ-2 criterion
+- Batch: L-1
 
-- [ ] **Step 1 (RED):** escrever teste failing `should expose stream contract` no `.spec.ts`, asserindo o contrato observável de REQ-2. Rodar `yarn test notification-gateway.port.spec` → ver FALHAR na asserção (não em import/sintaxe).
-- [ ] **Step 2 (GREEN):** definir a port mínima que satisfaz o teste. Rodar o teste → ver PASSAR.
-- [ ] **Step 3 (REFACTOR):** limpar com o teste como rede. Rodar de novo → verde.
-- [ ] **Step 4 (COMMIT):** `feat(notification): expor contrato de stream na port` (Conventional Commits, inglês).
+- [ ] **Step 1 (RED):** write the failing test `should expose stream contract` in the `.spec.ts`, asserting the observable contract of REQ-2. Run `yarn test notification-gateway.port.spec` → see it FAIL on the assertion (not on import/syntax).
+- [ ] **Step 2 (GREEN):** define the minimal port that satisfies the test. Run the test → see it PASS.
+- [ ] **Step 3 (REFACTOR):** clean up with the test as a safety net. Run again → green.
+- [ ] **Step 4 (COMMIT):** `feat(notification): expose stream contract on the port` (Conventional Commits, English).
 
 ### T-2  [!]
-- Origem: REQ-1, REQ-3
-- Depende de: T-1
-- Arquivos: src/modules/notification/infrastructure/seru/seru-notification.adapter.ts, src/.../tests/seru-notification.adapter.spec.ts
-- Verificação: teste `should emit order.status on change` cobre o critério de REQ-1; `should auto-reconnect on drop` cobre REQ-3
-- Lote: L-2
+- Source: REQ-1, REQ-3
+- Depends on: T-1
+- Files: src/modules/notification/infrastructure/seru/seru-notification.adapter.ts, src/.../tests/seru-notification.adapter.spec.ts
+- Verification: test `should emit order.status on change` covers the REQ-1 criterion; `should auto-reconnect on drop` covers REQ-3
+- Batch: L-2
 
-- [ ] **Step 1 (RED):** escrever teste failing `should emit order.status on change`. Rodar → ver FALHAR.
-- [ ] **Step 2 (GREEN):** implementar `streamStatus()` no adapter. Trecho não-óbvio (assina upstream e remapeia):
+- [ ] **Step 1 (RED):** write the failing test `should emit order.status on change`. Run → see it FAIL.
+- [ ] **Step 2 (GREEN):** implement `streamStatus()` in the adapter. Non-obvious snippet (subscribes upstream and remaps):
   ```ts
   streamStatus(orderCode: string): Observable<OrderStatusEvent> {
     return this.upstream.subscribe(orderCode).pipe(
@@ -104,66 +104,66 @@ generated: <data>
     );
   }
   ```
-  Rodar o teste → ver PASSAR.
-- [ ] **Step 3 (RED):** escrever teste failing `should auto-reconnect on drop` (REQ-3). Rodar → ver FALHAR.
-- [ ] **Step 4 (GREEN):** adicionar `retryWhen`/backoff ao pipe. Rodar os dois testes → verde.
-- [ ] **Step 5 (REFACTOR):** extrair o backoff se repetir. Rodar → verde.
-- [ ] **Step 6 (COMMIT):** `feat(notification): emitir order.status e reconectar no adapter SERU`.
+  Run the test → see it PASS.
+- [ ] **Step 3 (RED):** write the failing test `should auto-reconnect on drop` (REQ-3). Run → see it FAIL.
+- [ ] **Step 4 (GREEN):** add `retryWhen`/backoff to the pipe. Run both tests → green.
+- [ ] **Step 5 (REFACTOR):** extract the backoff if it repeats. Run → green.
+- [ ] **Step 6 (COMMIT):** `feat(notification): emit order.status and reconnect in the SERU adapter`.
 
-## Lotes
+## Batches
 
-<pré-computados do grafo de dependência + dos dois eixos (colisão de arquivo intra-repo +
- barreira de contrato cross-repo). O implement usa, não recomputa.
+<pre-computed from the dependency graph + the two axes (file collision intra-repo +
+ contract barrier cross-repo). The implement uses them, doesn't recompute.
 
- MULTI-REPO abre com L-0: 1 task/repo do registro `## Repos envolvidos` — clonar se ausente →
- worktree + branch da base do repo (bases diferem: uns master, uns develop) → commit scaffold das
- specs → push → PR DRAFT. Base e título saem do registro; ferramenta de PR é detalhe do executor.
- Single-repo NÃO tem L-0.
+ MULTI-REPO opens with L-0: 1 task/repo from the `## Repos involved` registry — clone if absent →
+ worktree + branch off the repo's base (bases differ: some master, some develop) → commit the specs
+ scaffold → push → DRAFT PR. Base and title come from the registry; the PR tool is the executor's detail.
+ Single-repo has NO L-0.
 
- Cross-repo: tasks de repos diferentes são [P] para IMPLEMENTAR se o contrato está congelado
- (cada uma mocka contra o shape), MAS o consumidor tem `Depende de:` o produtor para ordem de MERGE.
- Paralelo para implementar ≠ ordem para mergear.>
-- **L-0** (scaffold multi-repo): T-0-LOC, T-0-BFF — clone/worktree/branch/push/PR draft por repo
+ Cross-repo: tasks in different repos are [P] to IMPLEMENT if the contract is frozen
+ (each one mocks against the shape), BUT the consumer has `Depends on:` the producer for MERGE order.
+ Parallel to implement ≠ ordered to merge.>
+- **L-0** (multi-repo scaffold): T-0-LOC, T-0-BFF — clone/worktree/branch/push/draft PR per repo
 - **L-1** (serial): T-1
-- **L-2** (solo, [!]): T-2 — crítica, roda e valida sozinha
-- **L-3** (paralelo): T-4, T-5 — Arquivos sem interseção, nenhuma na lista quente
+- **L-2** (solo, [!]): T-2 — critical, runs and validates alone
+- **L-3** (parallel): T-4, T-5 — Files with no intersection, none on the hot list
 
-## Matriz de cobertura (REQ → task → teste)
+## Coverage matrix (REQ → task → test)
 
-<a espinha da cadeia de provas. TODO REQ da spec aparece aqui com ≥1 task e ≥1 teste.
- Se algum REQ ficar sem cobertura, o plan FALHA e lista o gap — não prossegue.>
+<the spine of the proof chain. EVERY REQ from the spec appears here with ≥1 task and ≥1 test.
+ If any REQ is left uncovered, the plan FAILS and lists the gap — it doesn't proceed.>
 
-| REQ   | Tasks    | Teste(s) que provam                       |
+| REQ   | Tasks    | Test(s) that prove it                     |
 |-------|----------|-------------------------------------------|
 | REQ-1 | T-2      | should emit order.status on change        |
 | REQ-2 | T-1      | should expose stream contract             |
 | REQ-3 | T-2      | should auto-reconnect on drop             |
 
-## Remediação de concerns (opcional, opt-in)
+## Concern remediation (optional, opt-in)
 
-<só concerns cuja âncora cai nos Arquivos da feature, e que o dev ACEITOU incluir.
- Vazio se nenhum foi aceito. Débito global NÃO entra aqui.>
-- T-6 — Origem: CONCERN-007 — trata timeout do stream upstream (src/.../adapter.ts:42)
+<only concerns whose anchor falls in the feature's Files, and that the dev ACCEPTED to include.
+ Empty if none was accepted. Global debt does NOT go here.>
+- T-6 — Source: CONCERN-007 — handles the upstream stream timeout (src/.../adapter.ts:42)
 
-## Análise pendente
+## Pending analysis
 
-<os [ANALYSIS: ...] abertos do /analyze. Persistidos AQUI no momento em que surgem.
- Enquanto tiver itens, status = draft e sdd:implement RECUSA. Vazia → "Nenhuma." e status = ready.>
-- Nenhuma.
+<the open [ANALYSIS: ...] items from /analyze. Persisted HERE the moment they arise.
+ While there are items, status = draft and sdd:implement REFUSES. Empty → "None." and status = ready.>
+- None.
 ```
 
-## Regras de preenchimento
+## Filling-in rules
 
-- **Steps são o roteiro de execução.** Toda task tem Steps em checkbox que o subagente do implement segue sem analisar nada. A análise da codebase acontece AQUI, no plan; o implement só executa. Steps mal-feitos forçam o implement a analisar — exatamente o que o design quer impedir.
-- **Steps seguem TDD.** Ordem fixa por critério de `Verificação`: RED (teste failing + rodar + ver falhar) → GREEN (código mínimo + rodar + ver passar) → REFACTOR → e um COMMIT atômico ao fim da task. Cada Step de teste nomeia o comando real (`yarn test ...`).
-- **Trecho de código só quando não-óbvio.** Sempre checkbox + arquivo + comando. Bloco de código embutido apenas para edits não-triviais (assinatura nova, spread condicional, SQL); edit trivial vira uma linha de descrição.
-- **Task atômica, ID estável.** `T-<n>` nunca renumerado — é o alvo de `sdd:implement T-n` e a chave da matriz.
-- **`Verificação` nomeia o teste** que cobre um critério de aceite da spec. Sem teste nomeado, a task está fora da cadeia de provas.
-- **`[!]` é marcado; `[P]`/`Lote` é computado em dois eixos.** Criticidade você decide (heurística + override do dev). Paralelizabilidade vem de DOIS eixos ortogonais: **colisão de arquivo (intra-repo)** — interseção de `Arquivos` + lista quente (`*.module.ts`, `env.schema.ts`, contratos); e **barreira de contrato (cross-repo)** — tasks de repos diferentes são `[P]` para implementar SE o `## Contrato de interface entre repos` está congelado, senão serial. Single-repo só tem o eixo de arquivo. Cross-repo `[P]` ainda carrega `Depende de:` o produtor (ordem de merge ≠ ordem de implementação). O resultado vira o `Lote`.
-- **`Repo:` é herdado, não decidido.** Vem do mapa REQ→repo da spec. TAG do repo (LOC/BFF...). Single-repo: trivial/omitido. `sdd:implement` usa para escolher o worktree.
-- **Contrato cross-repo é obrigatório multi-repo.** O bloco `## Contrato de interface entre repos` congela nome+tipo de cada campo que atravessa a cadeia. Omitido inteiro single-repo.
-- **`L-0` abre toda feature multi-repo.** 1 task/repo do registro: clone se ausente → worktree+branch da base do repo → commit scaffold → push → PR draft. Determinístico (base/título do registro). Single-repo não tem.
-- **Matriz completa é gate.** Todo REQ da spec → linha na matriz com task + teste. Faltou um → plan FALHA, lista o gap, para.
-- **`/analyze` loop bloqueante.** Checa: REQ fantasma, REQ não coberto, contradição com invariante enforced, e (multi-repo) **consistência de contrato cross-repo** — o campo do `## Contrato de interface entre repos` aparece com MESMO nome+tipo na task que PRODUZ e na que CONSOME. Inconsistência achada → `[ANALYSIS: ...]` persistido em "Análise pendente" na hora. `status: ready` só com a seção vazia. `sdd:implement` lê o status e a seção — plan `draft` ou com `[ANALYSIS]` aberto é recusado.
-- **Concerns só por escopo e opt-in.** Filtra por âncora nos `Arquivos` da feature, apresenta ao dev, só entra se aceito. Nunca auto-injeta, nunca puxa débito global.
-- **Cada decisão de Design → REQ-id.** Decisão órfã (sem REQ) é scope creep.
+- **Steps are the execution script.** Every task has checkbox Steps that the implement subagent follows without analyzing anything. The codebase analysis happens HERE, in the plan; the implement only executes. Poorly-made Steps force the implement to analyze — exactly what the design wants to prevent.
+- **Steps follow TDD.** Fixed order per `Verification` criterion: RED (failing test + run + see it fail) → GREEN (minimal code + run + see it pass) → REFACTOR → and one atomic COMMIT at the end of the task. Each test Step names the real command (`yarn test ...`).
+- **Code snippet only when non-obvious.** Always checkbox + file + command. Embedded code block only for non-trivial edits (new signature, conditional spread, SQL); a trivial edit becomes a one-line description.
+- **Atomic task, stable ID.** `T-<n>` never renumbered — it's the target of `sdd:implement T-n` and the matrix key.
+- **`Verification` names the test** that covers a spec acceptance criterion. Without a named test, the task is outside the proof chain.
+- **`[!]` is marked; `[P]`/`Batch` is computed on two axes.** Criticality you decide (heuristic + dev override). Parallelizability comes from TWO orthogonal axes: **file collision (intra-repo)** — `Files` intersection + hot list (`*.module.ts`, `env.schema.ts`, contracts); and **contract barrier (cross-repo)** — tasks in different repos are `[P]` to implement IF the `## Cross-repo interface contract` is frozen, otherwise serial. Single-repo only has the file axis. Cross-repo `[P]` still carries `Depends on:` the producer (merge order ≠ implementation order). The result becomes the `Batch`.
+- **`Repo:` is inherited, not decided.** Comes from the spec's REQ→repo map. Repo TAG (LOC/BFF...). Single-repo: trivial/omitted. `sdd:implement` uses it to pick the worktree.
+- **Cross-repo contract is mandatory multi-repo.** The `## Cross-repo interface contract` block freezes name+type of each field that crosses the chain. Omitted entirely single-repo.
+- **`L-0` opens every multi-repo feature.** 1 task/repo from the registry: clone if absent → worktree+branch off the repo's base → commit scaffold → push → draft PR. Deterministic (base/title from the registry). Single-repo doesn't have one.
+- **Complete matrix is a gate.** Every REQ from the spec → a row in the matrix with a task + test. Missing one → plan FAILS, lists the gap, stops.
+- **`/analyze` blocking loop.** Checks: phantom REQ, uncovered REQ, contradiction with an enforced invariant, and (multi-repo) **cross-repo contract consistency** — the field in the `## Cross-repo interface contract` appears with the SAME name+type in the task that PRODUCES it and the one that CONSUMES it. Inconsistency found → `[ANALYSIS: ...]` persisted in "Pending analysis" immediately. `status: ready` only with that section empty. `sdd:implement` reads the status and the section — a `draft` plan or one with an open `[ANALYSIS]` is refused.
+- **Concerns only by scope and opt-in.** Filters by anchor in the feature's `Files`, presents to the dev, only enters if accepted. Never auto-injects, never pulls global debt.
+- **Each Design decision → REQ-id.** An orphan decision (no REQ) is scope creep.

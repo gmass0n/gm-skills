@@ -1,54 +1,54 @@
-# Disciplina de hipóteses — leia quando um bug te tentar a pular pro fix
+# Hypothesis discipline — read this when a bug tempts you to jump to the fix
 
-O fluxo (hipóteses → instrumenta → reproduz → confirma → corrige na raiz → prova → limpa) está no SKILL.md. Este arquivo é o *porquê* e a defesa contra as racionalizações que silenciosamente o erodem. Leia-o quando uma hipótese parecer óbvia demais para testar, quando a pressa empurrar pro "vou só tentar esse fix", ou quando você se pegar prestes a editar produção sem evidência de runtime.
+The flow (hypotheses → instrument → reproduce → confirm → fix at the root → prove → clean up) is in SKILL.md. This file is the *why* and the defense against the rationalizations that silently erode it. Read it when a hypothesis seems too obvious to test, when haste pushes you toward "I'll just try this fix", or when you catch yourself about to edit production without runtime evidence.
 
-## O princípio central
+## The core principle
 
-**Se você não viu a evidência de runtime confirmar a causa, você não sabe a causa — está adivinhando.** Um fix aplicado sobre um palpite pode até apagar o sintoma, mas isso não prova nada: ele pode estar mascarando a causa real, que reaparece noutro lugar na semana seguinte. A linha do `.jsonl` que mostra `user=null` na fronteira é o que transforma "acho que é o upstream" em "é o upstream, vi acontecer". Sem ela, o fix é decoração: verde na tela, sem provar nada.
+**If you haven't seen the runtime evidence confirm the cause, you don't know the cause — you're guessing.** A fix applied over a hunch may even erase the symptom, but that proves nothing: it might be masking the real cause, which reappears somewhere else the following week. The `.jsonl` line showing `user=null` at the boundary is what turns "I think it's the upstream" into "it's the upstream, I saw it happen". Without it, the fix is decoration: green on screen, proving nothing.
 
-É por isso que a ordem não é negociável. Hipóteses-primeiro não é burocracia — é a fonte inteira do valor do fix como solução real. E é o atalho, não o desvio: um palpite errado custa três fixes em sequência, cada um mascarando o anterior, e um diff que vira lixo. A evidência custa uma instrumentação e uma reprodução. O caminho rigoroso é o mais curto.
+That's why the order is non-negotiable. Hypotheses-first is not bureaucracy — it's the entire source of the fix's value as a real solution. And it's the shortcut, not the detour: a wrong guess costs three fixes in a row, each masking the previous one, and a diff that turns to junk. The evidence costs one instrumentation and one reproduction. The rigorous path is the shortest one.
 
-## As racionalizações, e por que cada uma está errada
+## The rationalizations, and why each one is wrong
 
-Estes são os pensamentos que aparecem no meio da caça. Nomeá-los é como você resiste a eles.
+These are the thoughts that show up in the middle of the hunt. Naming them is how you resist them.
 
-- **"É óbvio o que é, vou só corrigir."** Se é óbvio, confirmar custa uma linha de log e dez segundos de reprodução — e quando *não* era óbvio (o que acontece mais do que se admite), você acabou de evitar um fix errado. O custo de confirmar é minúsculo; o de não confirmar é um diff que não resolve nada e esconde o bug real.
-- **"Vou tentar esse fix e ver se resolve."** Isso é guess-and-check — exatamente o thrashing que a skill existe para impedir. "Ver se resolve" sem uma hipótese e sem evidência é mexer no escuro; se "resolver", você não sabe *por quê*, e um fix que você não entende volta.
-- **"Não entendo totalmente, mas isso talvez funcione."** Um fix que você não entende não é um fix — é uma aposta. Ou ele mascara o sintoma (e o bug volta), ou muda outra coisa que você não previu. Pare e trace o dado até a origem; a evidência de runtime existe justamente para substituir o "talvez".
-- **"Só mais uma tentativa."** Essa é a frase que precede o thrashing infinito. Se duas ou três já falharam, a quarta na mesma direção não vai acertar — o problema é a premissa, não a implementação. É o gatilho do circuit breaker, não de mais um chute.
-- **"O stack trace é longo, vou direto à minha teoria."** A mensagem de erro frequentemente contém a solução exata. Pular a leitura para teorizar é trocar a evidência que o runtime já te deu de graça por um palpite.
+- **"It's obvious what it is, I'll just fix it."** If it's obvious, confirming costs one log line and ten seconds of reproduction — and when it *wasn't* obvious (which happens more often than people admit), you just avoided a wrong fix. The cost of confirming is tiny; the cost of not confirming is a diff that resolves nothing and hides the real bug.
+- **"I'll try this fix and see if it resolves it."** That's guess-and-check — exactly the thrashing the skill exists to prevent. "See if it resolves it" without a hypothesis and without evidence is poking in the dark; if it "resolves it", you don't know *why*, and a fix you don't understand comes back.
+- **"I don't fully understand it, but this might work."** A fix you don't understand isn't a fix — it's a bet. Either it masks the symptom (and the bug comes back), or it changes something else you didn't foresee. Stop and trace the data to its origin; runtime evidence exists precisely to replace the "maybe".
+- **"Just one more attempt."** That's the phrase that precedes infinite thrashing. If two or three have already failed, the fourth in the same direction won't hit — the problem is the premise, not the implementation. It's the trigger for the circuit breaker, not for one more guess.
+- **"The stack trace is long, I'll go straight to my theory."** The error message frequently contains the exact solution. Skipping the read to theorize is trading the evidence the runtime already gave you for free for a hunch.
 
-## Tabela de red-flags — reconheça a própria desculpa
+## Red-flags table — recognize your own excuse
 
-Estas frases (do `systematic-debugging`) são sinais de que você saiu da investigação e voltou a adivinhar. Quando uma delas passar pela sua cabeça — ou pelo seu texto — é o sinal para **voltar à F2** e exigir evidência antes de tocar produção.
+These phrases (from `systematic-debugging`) are signs you've left the investigation and gone back to guessing. When one of them passes through your head — or your text — it's the signal to **go back to F2** and demand evidence before touching production.
 
-| A frase-armadilha | O que ela realmente significa | O que fazer |
+| The trap phrase | What it really means | What to do |
 |---|---|---|
-| "Quick fix for now, investigate later" | Você vai mascarar o sintoma e o "later" nunca chega | Investigue agora — a causa raiz É o fix menor |
-| "Just try changing X and see if it works" | Guess-and-check sem hipótese | Forme a hipótese, instrumente, confirme com runtime |
-| "I don't fully understand but this might work" | Aposta, não fix | Trace o dado até a origem antes de editar |
-| "One more fix attempt" | Você já está em thrashing | Circuit breaker: pare, re-hipotetize a premissa |
-| "It's probably the same as last time" | Premissa não verificada | Confirme com evidência; bugs parecidos têm causas diferentes |
+| "Quick fix for now, investigate later" | You're going to mask the symptom and "later" never comes | Investigate now — the root cause IS the smaller fix |
+| "Just try changing X and see if it works" | Guess-and-check without a hypothesis | Form the hypothesis, instrument, confirm with runtime |
+| "I don't fully understand but this might work" | A bet, not a fix | Trace the data to its origin before editing |
+| "One more fix attempt" | You're already thrashing | Circuit breaker: stop, re-hypothesize the premise |
+| "It's probably the same as last time" | Unverified premise | Confirm with evidence; similar bugs have different causes |
 
-O objetivo da tabela não é te proibir de pensar rápido — é te dar um espelho. No instante em que você reconhece a própria desculpa nela, você sabe que precisa de evidência, não de mais um palpite.
+The point of the table isn't to forbid you from thinking fast — it's to give you a mirror. The instant you recognize your own excuse in it, you know you need evidence, not one more guess.
 
-## O circuit breaker em detalhe
+## The circuit breaker in detail
 
-Cada ciclo "instrumentei/corrigi → reproduzi → nenhuma hipótese confirmou, ou o fix não segurou" conta como **uma tentativa**. Conte-as honestamente — incluindo as que você descartou rápido.
+Each cycle "I instrumented/fixed → reproduced → no hypothesis confirmed, or the fix didn't hold" counts as **one attempt**. Count them honestly — including the ones you discarded quickly.
 
-**Após 3 tentativas falhas, pare.** Não tente uma 4ª variação na mesma direção. Três hipóteses que não seguraram quase nunca significam "preciso de uma 4ª hipótese parecida" — significam que uma **premissa** está errada:
+**After 3 failed attempts, stop.** Don't try a 4th variation in the same direction. Three hypotheses that didn't hold almost never mean "I need a 4th similar hypothesis" — they mean a **premise** is wrong:
 
-1. **O sintoma é o que você acha que é?** Talvez o erro visível seja consequência de outro, anterior, que você nem olhou.
-2. **Você está no arquivo certo?** O grep dos callers pode ter apontado a função errada; a causa pode estar uma camada acima.
-3. **O repro reproduz mesmo este bug?** Um repro que dispara *outro* caminho te dá evidência de um bug que não é o seu — e você persegue um fantasma.
+1. **Is the symptom what you think it is?** Maybe the visible error is a consequence of another, earlier one, that you never even looked at.
+2. **Are you in the right file?** The caller grep may have pointed at the wrong function; the cause may be one layer up.
+3. **Does the repro actually reproduce this bug?** A repro that triggers *another* path gives you evidence of a bug that isn't yours — and you chase a phantom.
 
-Volte à F2 e re-hipotetize do zero questionando essas três premissas. Se ainda assim travar, **escale ao humano com o report completo** — as 3 hipóteses refutadas e a evidência de cada uma. Isso não é desistir; é entregar ao humano um mapa do que já foi descartado, para ele decidir com contexto em vez de você seguir chutando. Honestidade vence thrashing.
+Go back to F2 and re-hypothesize from scratch, questioning those three premises. If you're still stuck, **escalate to the human with the complete report** — the 3 refuted hypotheses and the evidence for each. This isn't giving up; it's handing the human a map of what's already been ruled out, so they can decide with context instead of you continuing to guess. Honesty beats thrashing.
 
-## O que distingue uma boa hipótese
+## What distinguishes a good hypothesis
 
-Uma hipótese testável tem três partes, e é a terceira que a torna útil:
-- **Mecanismo:** *por que* o bug acontece ("`user` é null porque o middleware de auth não roda na rota pública").
-- **Onde:** a camada/arquivo onde isso vive (do mapa da codebase).
-- **Como distinguir:** qual evidência de runtime a confirma *e a separa das outras* ("se for isso, o `.jsonl` mostra `user=null` já na entrada do controller, antes do service").
+A testable hypothesis has three parts, and it's the third that makes it useful:
+- **Mechanism:** *why* the bug happens ("`user` is null because the auth middleware doesn't run on the public route").
+- **Where:** the layer/file where this lives (from the codebase map).
+- **How to distinguish:** which runtime evidence confirms it *and separates it from the others* ("if it's this, the `.jsonl` shows `user=null` already at the controller entry, before the service").
 
-Sem a terceira parte, você tem um palpite, não uma hipótese — duas hipóteses que a mesma evidência confirmaria são, na prática, uma só. Desenhe a instrumentação (F3) para produzir exatamente a evidência que separa uma da outra. É isso que faz a F4 ser conclusiva em vez de ambígua.
+Without the third part, you have a hunch, not a hypothesis — two hypotheses that the same evidence would confirm are, in practice, a single one. Design the instrumentation (F3) to produce exactly the evidence that separates one from the other. That's what makes F4 conclusive instead of ambiguous.

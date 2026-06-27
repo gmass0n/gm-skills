@@ -1,44 +1,44 @@
-# Archetype: `integrations/<lib-ou-serviço>.md`
+# Archetype: `integrations/<lib-or-service>.md`
 
-Um documento por **lib/serviço externo que o runtime realmente pluga** — não toda dependência transitiva do manifesto. Cruze o manifesto com código real de `import`/adapter: a entrada só existe se há wiring de verdade.
+One document per **external lib/service the runtime actually wires in** — not every transitive dependency of the manifest. Cross the manifest with real `import`/adapter code: the entry only exists if there is real wiring.
 
-Exemplos: cliente de banco (mongoose, prisma, pg), logger (pino, winston), tracer (dd-trace, otel), libs de auth/crypto (jsonwebtoken, bcrypt), geradores de doc HTTP (swagger, scalar), health probes (terminus), hardening (helmet), framework de CLI.
+Examples: database client (mongoose, prisma, pg), logger (pino, winston), tracer (dd-trace, otel), auth/crypto libs (jsonwebtoken, bcrypt), HTTP doc generators (swagger, scalar), health probes (terminus), hardening (helmet), CLI framework.
 
-Estes docs são **curtos** — referência operacional, não ensaio.
+These docs are **short** — operational reference, not an essay.
 
-## Idioma e forma
+## Language and shape
 
-PT-BR. Nomes de lib, caminhos e símbolos verbatim.
+English. Library names, paths and symbols verbatim.
 
-## Estrutura do doc
+## Doc structure
 
 ```markdown
-# <nome-da-lib>
+# <lib-name>
 
-## O que é / para que serve
-<1–3 frases. O papel concreto dela NESTE repo, não a descrição do README dela.>
+## What it is / what it's for
+<1–3 sentences. Its concrete role IN THIS repo, not its own README description.>
 
-## Onde está no código
-<Lista de caminhos reais: o adapter, o ponto de registro/módulo, o config, o VO/tipo
-que valida o formato. Cada item é um caminho clicável em backticks com 1 linha.>
+## Where it is in the code
+<List of real paths: the adapter, the registration/module point, the config, the VO/type
+that validates the format. Each item is a clickable path in backticks with 1 line.>
 
-## Regras e padrões
-<O que o repo decidiu sobre o uso dela. Comportamentos garantidos, limitações
-deliberadas, decisões ("não há needsRehash", "RS256 only", "CSP em modo X").>
+## Rules and patterns
+<What the repo decided about using it. Guaranteed behaviors, deliberate
+limitations, decisions ("there is no needsRehash", "RS256 only", "CSP in mode X").>
 ```
 
-Quando a integração for rica (gera contrato, tem decorators próprios, expõe rota), pode crescer com `## Como funciona` mostrando um trecho real. Mantenha o foco: é referência de "como ISSO está plugado aqui".
+When the integration is rich (generates a contract, has its own decorators, exposes a route), it can grow with `## How it works` showing a real excerpt. Keep the focus: it is a reference for "how THIS is wired here".
 
-## Onde olhar no repo
+## Where to look in the repo
 
-- O manifesto (`package.json` deps) → candidatos.
-- `rg "from '<lib>'"` ou o import da lib → onde é realmente usada.
-- O módulo/arquivo de registro (provider, factory, `forRoot`, init).
-- Config relacionada (env vars, schema de validação).
+- The manifest (`package.json` deps) → candidates.
+- `rg "from '<lib>'"` or the lib's import → where it is really used.
+- The registration module/file (provider, factory, `forRoot`, init).
+- Related config (env vars, validation schema).
 
-## Regras
+## Rules
 
-- Só entra quem está plugado no runtime. Dev-deps de build/test não viram doc de integração (viram, no máximo, item em `conventions/quality-gates`).
-- "Onde está no código" é o coração — caminhos reais que o leitor abre.
-- Se o repo não tem integrações externas relevantes, **não invente**. `integrations/` recebe uma nota curta no README, não entradas fabricadas.
-- Cross-linke para o pattern/layer que consome a integração (ex.: `mongoose.md` → `mapper-pattern.md`, `port-and-adapter-pattern.md`).
+- Only what is wired into the runtime gets in. Build/test dev-deps don't become an integration doc (they become, at most, an item in `conventions/quality-gates`).
+- "Where it is in the code" is the heart — real paths the reader opens.
+- If the repo has no relevant external integrations, **don't invent**. `integrations/` gets a short note in the README, not fabricated entries.
+- Cross-link to the pattern/layer that consumes the integration (e.g.: `mongoose.md` → `mapper-pattern.md`, `port-and-adapter-pattern.md`).

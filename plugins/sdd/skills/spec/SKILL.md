@@ -20,7 +20,7 @@ Read `docs/codebase/context.md` first. It gives you the stack, the enforced inva
 - If `docs/codebase/context.md` does not exist → tell the user the map is missing and recommend running `sdd:codebase` first. You can still proceed, but say the spec is ungrounded.
 - If it exists but a doc relevant to this feature looks stale (its `sources` paths changed since its `generated:` date) → recommend `sdd:codebase diff` before specifying, so you're not building on a false premise.
 
-**Lock the language now.** Detect the language of the user's initiating prompt. If it's Portuguese, the entire interview, every question, and the whole `spec.md` are in Portuguese. If English, everything is in English. This is essential — never mix languages or switch on the user who started the conversation. Record the choice in the spec's frontmatter (`lang: pt` or `lang: en`); `sdd:plan` reads it and never re-detects.
+**Detect and lock the conversation language now.** Detect the language of the user's initiating prompt and save it. The effect splits: the entire interview, every question, and ALL live narration to the user use the detected language (Portuguese or English) — never mix languages or switch on the user who started the conversation. But **`spec.md` itself is always written in English**, regardless of the detected language. Record the choice in the spec's frontmatter (`lang: pt` or `lang: en`); `lang:` records the conversation/narration language only, not the file's language. `sdd:plan` reads it and never re-detects.
 
 ## The interview — relentless, one question at a time
 
@@ -30,7 +30,7 @@ Interview the user relentlessly about every aspect of the feature until you reac
 - **One question at a time.** Asking several at once is bewildering and produces shallow answers. Wait for the answer before the next question.
 - **Always carry your recommendation.** For every question, you already did the thinking — present the option you'd choose first, marked as recommended, with the reasoning. The user is reacting to a proposal, not generating an answer from scratch.
 - **Explore the code instead of asking, whenever you can — via a subagent, never in your own context.** If a question is answerable by reading the repo (how does the existing auth guard work? what shape does the SERU client return?), dispatch an `Explore` subagent to find it and return just the answer. You stay the orchestrator: the interview and `spec.md` are yours (they need the user), but code reading is delegated so the raw file bytes never accumulate in your context. Only ask the user what the code cannot tell you — product intent, priorities, trade-offs, things not yet decided.
-- **Ask via the native question UI.** Use the `AskUserQuestion` tool so the user gets selectable options, can add notes, and can step away — the same feel as a brainstorming session. Free-text prose questions invite you to fill the silence with an assumption; structured options make the user's choice explicit. Put the recommended option first and label it "(recomendado)".
+- **Ask via the native question UI.** Use the `AskUserQuestion` tool so the user gets selectable options, can add notes, and can step away — the same feel as a brainstorming session. Free-text prose questions invite you to fill the silence with an assumption; structured options make the user's choice explicit. Put the recommended option first and label it in the detected language ("(recomendado)" for a PT-BR session, "(recommended)" for an English one).
 - **Challenge the prompt's premises against the code.** The user's initiating prompt states assumptions about the system as fact ("the company has no address", "the upstream doesn't return X", "there's no geocoding anywhere"). Treat each one as a claim to verify, not a given — dispatch an `Explore` subagent to confirm it before building on it. A wrong premise silently rewrites the whole scope: the most valuable moves in an interview often come from discovering the prompt was wrong (an upstream field that *does* exist, a service that already owns this responsibility). When the code contradicts the prompt, surface it with the evidence and let the user re-decide.
 
 The interview ends only when the spec has **zero** open clarifications (see the loop below) and the user confirms the picture is complete.
@@ -43,25 +43,25 @@ Concretely, walk every branch to its leaves: happy path **and** every edge (empt
 
 Four interview behaviors that protect the chain:
 
-- **Resolve scope/framing before product detail.** First settle the boundary questions — which repos/layers this touches, what's frontend vs backend, what's explicitly out — *before* drilling product behavior. A product answer decided under the wrong frame is wasted. **When the feature touches more than one repo, resolving the repo topology is not advice — it is the mandatory FIRST step, before any product detail.** Run the boundary question per repo: does this repo **PRODUCE**, **TRANSFORM**, or **CONSUME** the new data/contract? Producer mints it, transformer reshapes/forwards it, consumer reads it. Those roles order the repos into a chain (produce → transform → consume), and that chain — not prose — is what you write into `## Repos envolvidos` (see "Multi-repo topology" below). Single-repo features skip this entirely. (Here: the `operational-map` chain locations-api → customer-api → BFF → portal had to be settled before anything else made sense — geocoding *produced* in locations-api, *transformed*/forwarded through customer-api and the BFF, *consumed* in the portal.)
-- **When a new fact invalidates a settled decision, recompute the cascade.** Decisions depend on each other. When exploration or a user answer overturns an earlier one, do not leave the spec contradictory — reopen every decision and REQ that depended on it and rewrite them, leaving a "substitui a decisão anterior" trace so the history is legible. A spec that contradicts itself is worse than one with open markers. (Here: geocoding moved repos three times — BFF → customer-api → locations-api — each move rewrote the affected D-items and REQs.)
+- **Resolve scope/framing before product detail.** First settle the boundary questions — which repos/layers this touches, what's frontend vs backend, what's explicitly out — *before* drilling product behavior. A product answer decided under the wrong frame is wasted. **When the feature touches more than one repo, resolving the repo topology is not advice — it is the mandatory FIRST step, before any product detail.** Run the boundary question per repo: does this repo **PRODUCE**, **TRANSFORM**, or **CONSUME** the new data/contract? Producer mints it, transformer reshapes/forwards it, consumer reads it. Those roles order the repos into a chain (produce → transform → consume), and that chain — not prose — is what you write into `## Repos involved` (see "Multi-repo topology" below). Single-repo features skip this entirely. (Here: the `operational-map` chain locations-api → customer-api → BFF → portal had to be settled before anything else made sense — geocoding *produced* in locations-api, *transformed*/forwarded through customer-api and the BFF, *consumed* in the portal.)
+- **When a new fact invalidates a settled decision, recompute the cascade.** Decisions depend on each other. When exploration or a user answer overturns an earlier one, do not leave the spec contradictory — reopen every decision and REQ that depended on it and rewrite them, leaving a "supersedes the previous decision" trace so the history is legible. A spec that contradicts itself is worse than one with open markers. (Here: geocoding moved repos three times — BFF → customer-api → locations-api — each move rewrote the affected D-items and REQs.)
 - **When the user delegates the decision back to you, deliver a verdict — don't bounce it.** If the user answers "which is best?" / "you decide" instead of choosing, that is not permission to skip the decision; it is a request for your reasoned recommendation. Give a grounded verdict with the trade-off, and for a technical choice of real consequence (a library, a provider, an architecture), back it with a quick market/community check (`WebSearch`) rather than training-memory alone. Then record it as a decision. (Here: the map library and the geocoder were both delegated and resolved with a researched verdict.)
 - **Check each answer against the decision log before persisting it.** Before writing a user's answer into the spec, scan whether it contradicts a decision already recorded. If it does, surface the tension *before* persisting and let the user reconcile — they may have misclicked, or the new answer may be the one that forces a cascade. Never silently write a contradiction. (Here: a multi-company answer collided with the already-settled "line connects order to its store" decision; raising it caught a misselection.)
 
 ## Multi-repo topology — a first-class artifact, not prose
 
-**Condition: only when the feature touches more than one repo.** Single-repo features omit the `## Repos envolvidos` block entirely and tag no REQs — the spec is byte-identical to the single-repo shape. Everything in this section is conditional on that gate.
+**Condition: only when the feature touches more than one repo.** Single-repo features omit the `## Repos involved` block entirely and tag no REQs — the spec is byte-identical to the single-repo shape. Everything in this section is conditional on that gate.
 
 The old failure was treating the repo chain as narrative: the interview settled "this crosses 4 repos" in prose, then `sdd:plan` re-discovered each repo's local root, slug, base branch, and clone path from scratch. The fix: **the multi-repo analysis is born here, in the spec, as a parseable record the plan reads directly.** The plan inherits the topology; it never re-derives it.
 
 Two artifacts come out of the boundary question above:
 
-1. **`## Repos envolvidos`** — a parseable table the plan reads verbatim. One row per repo, ordered along the chain, plus a one-line `Cadeia:`. Columns:
+1. **`## Repos involved`** — a parseable table the plan reads verbatim. One row per repo, ordered along the chain, plus a one-line `Chain:`. Columns:
    - `tag` — short handle (`LOC`, `CUS`, `BFF`, `POR`) used to tag REQs and, later, tasks.
    - `repo (slug)` — the real repo slug (`pos-facil-api`, etc.), not a friendly name.
-   - `papel` — `produz` / `transforma` / `consome` (from the boundary question).
-   - `branch base` — `master` / `develop` (where this repo's feature branch forks from).
-   - `clonado?` — `sim` / `não` / `<onde>` (is the repo cloned locally, and where — so the plan doesn't re-discover it).
+   - `role` — `produces` / `transforms` / `consumes` (from the boundary question).
+   - `base branch` — `master` / `develop` (where this repo's feature branch forks from).
+   - `cloned?` — `yes` / `no` / `<where>` (is the repo cloned locally, and where — so the plan doesn't re-discover it).
 
    Settle each cell during the interview (dispatch an `Explore` subagent for slug/base-branch/clone facts the code or filesystem can answer; ask the user only product-intent gaps). Any cell you can't pin down is an ambiguity → `[NEEDS CLARIFICATION]`, same loop as everything else.
 
@@ -85,9 +85,9 @@ The danger with "always give a recommendation" is that an unanswered recommendat
 loop:
   ├─ ask the next question (with recommendation, via AskUserQuestion)
   ├─ new ambiguity surfaced and NOT resolved this turn?
-  │     → write a [NEEDS CLARIFICATION: <pergunta específica>] marker into spec.md NOW
+  │     → write a [NEEDS CLARIFICATION: <specific question>] marker into spec.md NOW
   ├─ ambiguity resolved?
-  │     → update spec.md, remove its marker, record the decision in "Decisões e restrições"
+  │     → update spec.md, remove its marker, record the decision in "Interview decisions & constraints"
   └─ exit condition: spec.md has ZERO [NEEDS CLARIFICATION] markers AND user confirms complete
         ↑ only here may the interview finish
 ```
@@ -105,59 +105,59 @@ Follow `templates/spec.template.md`. The required shape:
 ```markdown
 ---
 title: <feature>
-lang: pt | en          # locked from the initiating prompt; sdd:plan inherits this
+lang: pt | en          # conversation/narration language detected from the prompt; spec.md content is always English. sdd:plan inherits this
 status: draft | ready  # "ready" only when zero [NEEDS CLARIFICATION] remain
 generated: <data>
 ---
 
 # Spec: <feature>
 
-## Contexto e objetivo
-<por que isto existe, que problema do usuário resolve. 2-3 frases. Sem código.>
+## Context & goal
+<why this exists, what user problem it solves. 2-3 sentences. No code.>
 
-## Repos envolvidos
-<APENAS multi-repo; em single-repo OMITA esta seção inteira. Tabela parseável que o plan lê direto.>
-| tag | repo (slug) | papel | branch base | clonado? |
-|-----|-------------|-------|-------------|----------|
-| LOC | locations-api | produz | master | sim |
-| CUS | pos-facil-api | transforma | master | sim |
-| BFF | seru-delivery-api | transforma | develop | sim (este repo) |
-| POR | seru-delivery-portal | consome | develop | não |
+## Repos involved
+<ONLY multi-repo; in single-repo OMIT this whole section. Parseable table the plan reads directly.>
+| tag | repo (slug) | role | base branch | cloned? |
+|-----|-------------|------|-------------|---------|
+| LOC | locations-api | produces | master | yes |
+| CUS | pos-facil-api | transforms | master | yes |
+| BFF | seru-delivery-api | transforms | develop | yes (this repo) |
+| POR | seru-delivery-portal | consumes | develop | no |
 
-Cadeia: LOC → CUS → BFF → POR
+Chain: LOC → CUS → BFF → POR
 
 ## User stories
-- US-1: Como <persona>, quero <capacidade> para <benefício>.
+- US-1: As a <persona>, I want <capability> so that <benefit>.
 
-## Requisitos (EARS, com REQ-IDs)
-<cada requisito é testável e observável. EARS: WHEN/WHILE/IF ... THE sistema SHALL ...
- Multi-repo: cada REQ termina com (repo: <tag>) — o plan deriva o Repo: da task daqui.
- Single-repo: sem tag.>
-- REQ-1: WHEN <evento>, THE sistema SHALL <comportamento observável>. (repo: BFF)
-- REQ-2: WHILE <estado>, THE sistema SHALL <comportamento>. (repo: LOC)
+## Requirements (EARS, with REQ-IDs)
+<each requirement is testable and observable. EARS: WHEN/WHILE/IF ... THE system SHALL ...
+ Multi-repo: each REQ ends with (repo: <tag>) — the plan derives the task's Repo: from here.
+ Single-repo: no tag.>
+- REQ-1: WHEN <event>, THE system SHALL <observable behavior>. (repo: BFF)
+- REQ-2: WHILE <state>, THE system SHALL <behavior>. (repo: LOC)
 
-## Critérios de aceite (por requisito)
-- REQ-1: dado <contexto>, quando <ação>, então <resultado verificável>.
+## Acceptance criteria (per requirement)
+- REQ-1: given <context>, when <action>, then <verifiable result>.
 
-## Fora de escopo
-- <o que explicitamente NÃO entra — fecha a porta para scope creep>
+## Out of scope
+- <what explicitly does NOT belong — closes the door to scope creep>
 
-## Decisões e restrições da entrevista
-<decision log: o COMO-condicionante decidido no grill que o plan precisa herdar
- mas que não é um requisito. Cada linha: a decisão + por quê + REQ afetado.>
-- D-1: <decisão> — porque <razão>. Afeta REQ-x.
+## Interview decisions & constraints
+<decision log: the conditioning-HOW settled in the grill that the plan must inherit
+ but is not a requirement. Each line: the decision + why + affected REQ.>
+- D-1: <decision> — because <reason>. Affects REQ-x.
 
-## Clarificações pendentes
-<os [NEEDS CLARIFICATION] ainda abertos. Quando vazio, status vira "ready".>
+## Open clarifications
+<the [NEEDS CLARIFICATION] still open. When empty, status becomes "ready".>
 ```
 
-**Why both "Decisões" and "Clarificações" exist:** they are opposite halves of the handoff. "Clarificações pendentes" is what's still *open* (the plan must not start until it's empty). "Decisões e restrições" is what was *closed during the interview* — choices like "SSE passthrough, not polling" or "Finished maps to 'closed'" that are technical-conditioning but not requirements. Without the decision log, those choices evaporate and `sdd:plan` re-derives or contradicts them. The spec stays "WHAT", but it carries forward the constraints the conversation settled.
+**Why both "Interview decisions & constraints" and "Open clarifications" exist:** they are opposite halves of the handoff. "Open clarifications" is what's still *open* (the plan must not start until it's empty). "Interview decisions & constraints" is what was *closed during the interview* — choices like "SSE passthrough, not polling" or "Finished maps to 'closed'" that are technical-conditioning but not requirements. Without the decision log, those choices evaporate and `sdd:plan` re-derives or contradicts them. The spec stays "WHAT", but it carries forward the constraints the conversation settled.
 
 ## Requirement quality — a cheap check inside the loop
 
-A requirement that passes the coverage matrix but is untestable is a false green. As you write each REQ, sanity-check it: does it have a measurable, observable criterion? "baixa latência" is not testable; "p95 < 200ms" is. If a REQ has no measurable threshold, that's an ambiguity — mark it `[NEEDS CLARIFICATION: qual o número?]` rather than letting it through. This is the "unit test for English" applied per requirement, folded into the loop you already run — not a separate step.
+A requirement that passes the coverage matrix but is untestable is a false green. As you write each REQ, sanity-check it: does it have a measurable, observable criterion? "low latency" is not testable; "p95 < 200ms" is. If a REQ has no measurable threshold, that's an ambiguity — mark it `[NEEDS CLARIFICATION: what is the number?]` rather than letting it through. This is the "unit test for English" applied per requirement, folded into the loop you already run — not a separate step.
 
-**When the spec has multiple composing time windows** (retry, grace period, expiry, timeout, TTL), sum them explicitly and validate the total against the user's intent before closing — sequential vs parallel changes the answer. Ask it plainly: "retry 7d + grace 5d — paralelos ou sequenciais? o teto até suspender é 8 ou 15 dias?". The act of adding them up is what catches a window silently stacked in series when the user meant it in parallel.
+**When the spec has multiple composing time windows** (retry, grace period, expiry, timeout, TTL), sum them explicitly and validate the total against the user's intent before closing — sequential vs parallel changes the answer. Ask it plainly: "retry 7d + grace 5d — parallel or sequential? is the ceiling until suspension 8 or 15 days?". The act of adding them up is what catches a window silently stacked in series when the user meant it in parallel.
 
 ## Validation diagram — draw it to find the gaps
 
@@ -174,8 +174,8 @@ Skip it for trivial specs (linear CRUD, no state) — YAGNI.
 
 When the loop exits (zero clarifications, user confirms):
 1. Set `status: ready` in the frontmatter.
-2. Confirm `spec.md` has REQ-IDs, acceptance criteria, the decision log, and an empty "Clarificações pendentes". **Multi-repo: also confirm the `## Repos envolvidos` table is complete (no unresolved cells), the `Cadeia:` line is present, and every REQ carries a `(repo: <tag>)`.**
-3. Hand off explicitly: tell the user the spec is ready at `docs/specs/<feature>/spec.md` and the next step is `sdd:plan <feature>`. There is no orchestrator that chains automatically — the handoff line is how the user knows where they are. **In multi-repo, what descends to the plan is DATA, not just a command: the `## Repos envolvidos` record, the `Cadeia:` chain, and the REQ→repo map. The plan reads the topology from these — it does not re-discover root/slug/branch/clone per repo. State this in the handoff line so the user knows the topology is already settled.**
+2. Confirm `spec.md` has REQ-IDs, acceptance criteria, the decision log, and an empty "Open clarifications". **Multi-repo: also confirm the `## Repos involved` table is complete (no unresolved cells), the `Chain:` line is present, and every REQ carries a `(repo: <tag>)`.**
+3. Hand off explicitly: tell the user the spec is ready at `docs/specs/<feature>/spec.md` and the next step is `sdd:plan <feature>`. There is no orchestrator that chains automatically — the handoff line is how the user knows where they are. **In multi-repo, what descends to the plan is DATA, not just a command: the `## Repos involved` record, the `Chain:` chain, and the REQ→repo map. The plan reads the topology from these — it does not re-discover root/slug/branch/clone per repo. State this in the handoff line so the user knows the topology is already settled.**
 
 ## What this skill must not do
 
@@ -183,7 +183,7 @@ When the loop exits (zero clarifications, user confirms):
 - **No writing outside `docs/specs/<feature>/`.** The codebase map is read-only input.
 - **No reading repo source in your own context.** Delegate code exploration to an `Explore` subagent and keep only its answer. The main agent orchestrates the interview; it doesn't fill itself with file bytes.
 - **No finishing with open ambiguity.** The loop exists precisely so the spec can never be "done but vague".
-- **No language drift.** Whatever the initiating prompt was, stay in it.
+- **No language drift in the conversation.** Interview and live narration stay in the detected language; never switch on the user. (The `spec.md` file is always English regardless.)
 
 ## Common mistakes
 
@@ -194,14 +194,14 @@ When the loop exits (zero clarifications, user confirms):
 | Writing requirements that mention classes/files | That's design. Spec is observable behavior that survives a rewrite. |
 | Holding clarifications to write at the end | Persist each marker the moment it surfaces — the spec on disk must always be resumable. |
 | Vague requirement with no measurable criterion | Mark it for clarification. "Fast" needs a number to be testable. |
-| Mixing PT and EN, or switching language mid-spec | Lock from the initiating prompt; record `lang:` in frontmatter; never switch. |
+| Mixing PT and EN, or switching the conversation language mid-interview | Lock the conversation language from the initiating prompt; record it in `lang:`; never switch on the user. `spec.md` content stays English regardless. |
 | Asking what the code already answers | Read the repo. Reserve questions for product intent and trade-offs. |
 | Taking the prompt's claims about the system as fact | Verify each premise via an `Explore` subagent. A wrong premise rewrites the scope — surface the contradiction with evidence. |
 | Sampling a few questions and declaring "enough" | Exhaust every branch (edges, failures, limits, legacy data). Over-ask; an unasked question is an untested behavior downstream. |
 | Bouncing "you decide" back to the user | Deliver a reasoned verdict; research it (`WebSearch`) for consequential technical choices; record it as a decision. |
-| Leaving the spec contradictory after a new fact | Recompute the cascade — rewrite every dependent decision/REQ with a "substitui a decisão anterior" trace. |
+| Leaving the spec contradictory after a new fact | Recompute the cascade — rewrite every dependent decision/REQ with a "supersedes the previous decision" trace. |
 | Persisting an answer that contradicts a settled decision | Check each answer against the decision log first; surface the tension before writing it. |
-| Leaving the repo chain as prose in a multi-repo feature | Topology is the FIRST step: fill `## Repos envolvidos` (tag/slug/papel/branch/clonado + `Cadeia:`) and tag every REQ `(repo: <tag>)`, so the plan inherits it instead of re-deriving. |
+| Leaving the repo chain as prose in a multi-repo feature | Topology is the FIRST step: fill `## Repos involved` (tag/slug/role/branch/cloned + `Chain:`) and tag every REQ `(repo: <tag>)`, so the plan inherits it instead of re-deriving. |
 | Treating an unconfirmed external API contract as fact | Confirm it via official doc/`WebFetch`; whatever you can't confirm becomes `[UNVERIFIED]` and rides down to the plan — not a silent premise. |
 | Composing time windows without validating the total | Sum them and ask the user: do they compose in parallel or in series? Confirm the aggregate SLA (8 days vs 15 days is the difference). |
 | A state-machine spec with no diagram | Draw the states/transitions; it's where timing and transition gaps show up. Pick the type (state/sequence/flowchart) by what the spec is. |

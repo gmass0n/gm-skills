@@ -1,71 +1,71 @@
-# Archetype: `concerns/<área-de-risco>.md`
+# Archetype: `concerns/<risk-area>.md`
 
-Um documento por **área de risco** do código. Diferente dos outros cinco diretórios, `concerns/` é **avaliativo, não descritivo**: registra o que está errado/frágil, não como o código funciona. Por isso **não abre com `Regra-de-ouro`** — abre direto nos achados.
+One document per **risk area** of the code. Unlike the other five directories, `concerns/` is **evaluative, not descriptive**: it records what is wrong/fragile, not how the code works. That's why it **does not open with a `Golden rule`** — it opens straight at the findings.
 
-Áreas típicas (gere só as que têm achado real): `security-gaps.md`, `perf-hotspots.md`, `fragile-areas.md`, `tech-debt.md`. Não crie um arquivo de área sem ao menos um achado evidenciado.
+Typical areas (generate only the ones with a real finding): `security-gaps.md`, `perf-hotspots.md`, `fragile-areas.md`, `tech-debt.md`. Don't create an area file without at least one evidenced finding.
 
-## Idioma e forma
+## Language and shape
 
-PT-BR. Caminhos, símbolos e markers verbatim.
+English. Paths, symbols and markers verbatim.
 
-## Regra de ouro do diretório (não vai no doc — é pra você)
+## Directory golden rule (does not go in the doc — it's for you)
 
-**Evidência forte ou nada.** Cada achado precisa de uma âncora real: `caminho:linha`, um `TODO`/`FIXME`/`HACK` confirmado no código, ausência comprovada de teste, dependência desatualizada. Concern sem âncora = especulação = corta. Este é o diretório onde a tentação de inventar é maior — resista. Um `concerns/` honestamente curto vale mais que um inflado.
+**Strong evidence or nothing.** Every finding needs a real anchor: `path:line`, a `TODO`/`FIXME`/`HACK` confirmed in the code, a proven absence of a test, an out-of-date dependency. A concern without an anchor = speculation = cut it. This is the directory where the temptation to invent is highest — resist. An honestly short `concerns/` is worth more than an inflated one.
 
-## Frontmatter (obrigatório)
+## Frontmatter (required)
 
 ```yaml
 ---
-title: <Área de risco>
+title: <Risk area>
 area: concerns
-generated: <data passada por você>
+generated: <date passed by you>
 sources:
-  - <os arquivos/globs onde os achados desta área vivem>
+  - <the files/globs where this area's findings live>
 ---
 ```
 
-## Estrutura do doc
+## Doc structure
 
-Cada achado é **machine-parseable** — é isto que diferencia este fork. O `sdd:plan` ingere concerns filtrando pela `ancora`: ele cruza os arquivos que a feature vai tocar contra a `ancora` de cada achado e só traz os relevantes (opt-in, com gate humano) como tasks de remediação. Prosa não é filtrável; por isso `id` estável, `severidade` enum e âncora **com número de linha** são obrigatórios.
+Each finding is **machine-parseable** — this is what differentiates this fork. `sdd:plan` ingests concerns by filtering on the `anchor`: it crosses the files the feature will touch against each finding's `anchor` and only brings in the relevant ones (opt-in, with a human gate) as remediation tasks. Prose is not filterable; that's why a stable `id`, a `severity` enum and an anchor **with a line number** are mandatory.
 
 ```markdown
-# <Área de risco>   (ex.: Security Gaps, Performance Hotspots, Fragile Areas, Tech Debt)
+# <Risk area>   (e.g. Security Gaps, Performance Hotspots, Fragile Areas, Tech Debt)
 
-<1 frase sobre o escopo desta área. Se a varredura não achou nada relevante:
-"Nenhum achado relevante de <área> com evidência no código atual." e PARE — não invente.>
+<1 sentence about the scope of this area. If the sweep found nothing relevant:
+"No relevant <area> finding with evidence in the current code." and STOP — don't invent.>
 
-## <Achado conciso>          (uma seção `##` por achado, título = o problema em si)
-- id: CONCERN-NNN          # estável; não reuse números de achados removidos
-- severidade: alta         # enum exato: alta | média | baixa
-- ancora: caminho/do/arquivo.ts:NN   # SEMPRE com :linha; liste pontos extras se o achado se repete
-- descricao: <o problema em uma linha — o que está errado>
-- evidencia: <o trecho/marker/fato observado: o TODO real, o código frágil, o teste ausente>
-- impacto: <o que pode quebrar / vazar / degradar, concreto>
-- sugestao: <opcional, 1 linha — só se óbvia. Não vire backlog grooming.>
+## <Concise finding>          (one `##` section per finding, title = the problem itself)
+- id: CONCERN-NNN          # stable; don't reuse numbers of removed findings
+- severity: high           # exact enum: high | medium | low
+- anchor: path/to/file.ts:NN   # ALWAYS with :line; list extra points if the finding repeats
+- description: <the problem in one line — what is wrong>
+- evidence: <the observed excerpt/marker/fact: the real TODO, the fragile code, the missing test>
+- impact: <what can break / leak / degrade, concrete>
+- suggestion: <optional, 1 line — only if obvious. Don't turn it into backlog grooming.>
 ```
 
-> O bloco de campos é lido por máquina: mantenha as chaves exatas (`id`, `severidade`, `ancora`, `descricao`, ...) e a `severidade` dentro do enum. Um `Âncora:` sem `:linha` ou severidade escrita em prosa quebra a ingestão do `sdd:plan`.
+> The field block is machine-read: keep the keys exact (`id`, `severity`, `anchor`, `description`, ...) and the `severity` inside the enum. An `Anchor:` without `:line` or a severity written in prose breaks `sdd:plan` ingestion.
 
-## Onde olhar no repo
+## Where to look in the repo
 
-- `rg -n "TODO|FIXME|HACK|XXX|@deprecated"` → débito declarado pelo próprio time.
-- Arquivos de regra de negócio sem `*.spec`/`*.test` co-localizado → cobertura faltando em área crítica.
-- `eslint-disable`, `@ts-ignore`, `any` em pontos sensíveis → escapes de tipo/lint.
-- Segurança: secret hardcoded, validação de input ausente em entrypoint, authz checada em lugar errado, crypto fraco/sem rehash. **Só registre o que vê no código** — não rode scanner externo nem invente CVE.
-- Perf: N+1, loop sobre I/O, ausência de índice/paginação onde os dados crescem.
-- Manifesto: deps com major desatualizado, pacote sem manutenção.
+- `rg -n "TODO|FIXME|HACK|XXX|@deprecated"` → debt declared by the team itself.
+- Business-rule files without a co-located `*.spec`/`*.test` → missing coverage in a critical area.
+- `eslint-disable`, `@ts-ignore`, `any` at sensitive points → type/lint escapes.
+- Security: hardcoded secret, missing input validation at an entrypoint, authz checked in the wrong place, weak crypto/no rehash. **Only record what you see in the code** — don't run an external scanner or invent a CVE.
+- Perf: N+1, loop over I/O, missing index/pagination where the data grows.
+- Manifest: deps with an out-of-date major, an unmaintained package.
 
-## Regras
+## Rules
 
-- **Severidade (enum) e id em todo achado.** É o que torna o doc acionável por humano (triagem) e por máquina (ingestão do `sdd:plan`).
-- **Observado, não imaginado.** "Esse repo poderia ter problema de X" não é achado. "`auth.ts:42` confia em `req.headers` sem validar" é.
-- Sem achados numa área → não crie o arquivo. Sem achados em lugar nenhum → `concerns/` recebe um único `tech-debt.md` com a nota de "nenhum achado relevante", e o README registra isso.
-- Cross-linke para o doc descritivo da área quando útil (`fragile-areas.md` → `patterns/mapper-pattern.md`), mas concern e descrição vivem separados de propósito.
-- **Não duplique os outros docs.** Inconsistência de naming é `conventions/`, não concern. Concern é risco, não divergência de estilo.
+- **Severity (enum) and id on every finding.** It's what makes the doc actionable by a human (triage) and by a machine (`sdd:plan` ingestion).
+- **Observed, not imagined.** "This repo could have a problem with X" is not a finding. "`auth.ts:42` trusts `req.headers` without validating" is.
+- No findings in an area → don't create the file. No findings anywhere → `concerns/` gets a single `tech-debt.md` with the note "no relevant findings", and the README records it.
+- Cross-link to the descriptive doc of the area when useful (`fragile-areas.md` → `patterns/mapper-pattern.md`), but concern and description live separately on purpose.
+- **Don't duplicate the other docs.** A naming inconsistency is `conventions/`, not a concern. A concern is a risk, not a style divergence.
 
-## Volatilidade (importa pro diff mode)
+## Volatility (matters for diff mode)
 
-Concerns somem quando o código é corrigido. Em **diff mode**, ao tocar uma área:
-- Remova o achado que o diff resolveu (não deixe concern morto). Inclui o caso em que uma task de remediação do `sdd:plan` (rastreada como `Origem: CONCERN-NNN`) fechou o achado — remova o `CONCERN-NNN` e registre.
-- Adicione o que o diff introduziu, com `id` novo (não reuse o número de um removido).
-- Registre no `## Changelog` do doc o que mudou e por quê (`- [data]: removido CONCERN-007 (timeout do stream), corrigido em <commit/arquivo>`).
+Concerns disappear when the code is fixed. In **diff mode**, when touching an area:
+- Remove the finding the diff resolved (don't leave a dead concern). This includes the case where a `sdd:plan` remediation task (tracked as `Source: CONCERN-NNN`) closed the finding — remove the `CONCERN-NNN` and record it.
+- Add what the diff introduced, with a new `id` (don't reuse the number of a removed one).
+- Record in the doc's `## Changelog` what changed and why (`- [date]: removed CONCERN-007 (stream timeout), fixed in <commit/file>`).

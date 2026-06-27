@@ -1,6 +1,6 @@
 # TDD discipline — read when a task tempts you to skip the red step
 
-The operational loop (RED → watch fail → GREEN → watch pass → REFACTOR, repeated per `Verificação` criterion, then one atomic commit) is in SKILL.md, and the plan's per-task Steps already lay it out in order. This file is the *why* and the defense against the rationalizations that quietly erode it. Read it when a test is awkward to write, when the code seems "too simple to test", or when you catch yourself about to write code first.
+The operational loop (RED → watch fail → GREEN → watch pass → REFACTOR, repeated per `Verification` criterion, then one atomic commit) is in SKILL.md, and the plan's per-task Steps already lay it out in order. This file is the *why* and the defense against the rationalizations that quietly erode it. Read it when a test is awkward to write, when the code seems "too simple to test", or when you catch yourself about to write code first.
 
 ## The core principle
 
@@ -12,7 +12,7 @@ This is why the order is not negotiable. The red step is not bureaucracy — it'
 
 These are the thoughts that show up mid-task. Naming them is how you resist them.
 
-- **"This is too simple to need a test."** Simple code breaks too — an off-by-one, a wrong default, a flipped boolean. And "simple" code is exactly where a 30-second test is cheap. If it's truly trivial (a constant, a pure re-export), the task probably shouldn't have had a `Verificação` line; if it does, honor it.
+- **"This is too simple to need a test."** Simple code breaks too — an off-by-one, a wrong default, a flipped boolean. And "simple" code is exactly where a 30-second test is cheap. If it's truly trivial (a constant, a pure re-export), the task probably shouldn't have had a `Verification` line; if it does, honor it.
 - **"I'll write the test right after."** You won't watch it fail, so it won't prove anything — and "after" tends to become "never" under pressure. The cost of test-first is front-loaded and small; the cost of test-after is a false green that hides a real bug.
 - **"The test is hard to write."** A hard-to-test unit is usually telling you the design is tangled — too many responsibilities, hidden dependencies, no seam. That's signal, not friction. Listen to it: the test difficulty is surfacing a design problem the codebase map would also frown on.
 - **"I already know it works, I ran it manually."** Manual runs aren't repeatable and don't gate the next change. The next person (or the next task) needs the test to catch a regression you can't foresee.
@@ -20,9 +20,9 @@ These are the thoughts that show up mid-task. Naming them is how you resist them
 
 ## What a good test asserts
 
-Write the test from the task's `Verificação` criterion, which traces to an acceptance criterion in the spec. So the test asserts **observable behavior tied to a requirement**, not implementation details:
-- Good: "emite evento `order.status` com o code quando o pedido muda" — that's REQ-1's observable behavior.
-- Bad: "chama `adapter.subscribe()` uma vez" — that's testing the mechanism, and it'll break on a harmless refactor while proving nothing about the requirement.
+Write the test from the task's `Verification` criterion, which traces to an acceptance criterion in the spec. So the test asserts **observable behavior tied to a requirement**, not implementation details:
+- Good: "emits an `order.status` event with the code when the order changes" — that's REQ-1's observable behavior.
+- Bad: "calls `adapter.subscribe()` once" — that's testing the mechanism, and it'll break on a harmless refactor while proving nothing about the requirement.
 
 If you can't phrase the test in terms of observable behavior, that's a sign the task or the requirement is under-specified — surface it rather than writing a brittle mechanism-test.
 
@@ -38,7 +38,7 @@ If the test passes the first time you run it — before you wrote the code — s
 
 Green must come from correct code, never from a weakened test. The Post-Gate Review and the closing gate's test-count check exist to catch these, but don't rely on them — don't do them in the first place:
 
-- **Don't modify the test to fit broken code.** Once written from the `Verificação` criterion, the test is the spec; the implementation conforms to it, not the reverse.
+- **Don't modify the test to fit broken code.** Once written from the `Verification` criterion, the test is the spec; the implementation conforms to it, not the reverse.
 - **Don't weaken assertions** to make them pass more easily (loosening an exact match to a `toBeTruthy`, dropping a field check).
 - **Don't delete or `.skip`/`.only`/`xit` a failing test** to get a green run. That lowers the bar silently — exactly what the test-count check flags. A test legitimately removed needs its own task and commit.
 - **Don't write the minimum to game the test** rather than satisfy the behavior — minimum *correct* code, not minimum *passing* code.

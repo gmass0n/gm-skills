@@ -1,75 +1,75 @@
-# Archetype: `architecture/<decisão>.md`
+# Archetype: `architecture/<decision>.md`
 
-Um documento por **decisão ou estilo arquitetural macro** que o código realmente assume. Não documente estilos que o repo *poderia* usar — só os que estão impostos na estrutura.
+One document per **macro architectural decision or style** that the code actually commits to. Don't document styles the repo *could* use — only the ones imposed in the structure.
 
-Sinais que justificam um doc aqui: regra de dependência entre camadas, ports & adapters (abstração + implementação concreta trocável), CQRS (split command/query/handler/bus), bounded contexts (módulos auto-contidos), layout de monorepo.
+Signals that justify a doc here: dependency rule between layers, ports & adapters (abstraction + swappable concrete implementation), CQRS (command/query/handler/bus split), bounded contexts (self-contained modules), monorepo layout.
 
-## Idioma e forma
+## Language and shape
 
-PT-BR. Identificadores, caminhos e nomes de lib ficam verbatim.
+English. Identifiers, paths and library names stay verbatim.
 
-## Estrutura do doc
+## Doc structure
 
 ```markdown
-# <Nome do estilo>   (ex.: Clean Architecture, Hexagonal Architecture, CQRS)
+# <Style name>   (e.g. Clean Architecture, Hexagonal Architecture, CQRS)
 
-## Regra-de-ouro
-<A invariante central em 1–3 frases. Para Clean Arch: "A dependência aponta sempre
-para dentro." Se há um diagrama ASCII de fluxo de dependência que cabe, inclua.>
+## Golden rule
+<The central invariant in 1–3 sentences. For Clean Arch: "Dependency always points
+inward." If there is an ASCII dependency-flow diagram that fits, include it.>
 
-## Mapeamento para folders   (quando o estilo se materializa em pastas)
-<Tabela: camada/elemento → folder → o que pode importar. Caminhos reais do repo.>
+## Mapping to folders   (when the style materializes in folders)
+<Table: layer/element → folder → what it can import. Real repo paths.>
 
-## Como cada parte isola a próxima   (a prova)
-<Trechos de código REAL, cada um com `// caminho/do/arquivo`, mostrando a regra
-em ação. Para cada camada/elemento, um exemplo curto que prova o isolamento.
-Mostre o import permitido E o proibido.>
+## How each part isolates the next   (the proof)
+<REAL code excerpts, each with `// path/to/file`, showing the rule
+in action. For each layer/element, a short example that proves the isolation.
+Show the allowed import AND the forbidden one.>
 
-## Sintomas de violação
-<Lista de imports/estruturas que denunciam quebra do estilo. "`import X` em Y → errado.">
+## Symptoms of violation
+<List of imports/structures that betray a break of the style. "`import X` in Y → wrong.">
 
-## Por que essa rigidez   (opcional, mas valioso)
-<Testabilidade, trocabilidade, onboarding. Por que a regra existe, não só qual é.>
+## Why this rigidity   (optional, but valuable)
+<Testability, swappability, onboarding. Why the rule exists, not just what it is.>
 ```
 
-## Onde olhar no repo
+## Where to look in the repo
 
-- A estrutura de pastas repetida entre módulos → revela o estilo de camadas.
-- Classes abstratas (ports) + implementações concretas (adapters) + ponto de wiring (`provide/useClass`, factory, container).
+- The folder structure repeated across modules → reveals the layering style.
+- Abstract classes (ports) + concrete implementations (adapters) + the wiring point (`provide/useClass`, factory, container).
 - Command/Query/Handler/Bus → CQRS.
-- Config de lint de boundaries / import rules → **a prova de que o estilo é imposto, não aspiracional.** Cite e cross-linke para o doc de `conventions/` que detalha o enforcement.
+- Boundary lint config / import rules → **the proof that the style is enforced, not aspirational.** Cite it and cross-link to the `conventions/` doc that details the enforcement.
 
-## Regras
+## Rules
 
-- Cross-linke para `conventions/*-boundaries.md` (ou equivalente) — é lá que o enforcement vive.
-- Cross-linke para os `layers/*.md` que este estilo organiza.
-- Toda afirmação cita um caminho real. Diagrama sem código embaixo não prova nada.
+- Cross-link to `conventions/*-boundaries.md` (or equivalent) — that's where the enforcement lives.
+- Cross-link to the `layers/*.md` this style organizes.
+- Every claim cites a real path. A diagram with no code under it proves nothing.
 
-## Exemplo (extraído de um repo NestJS — adapte ao stack alvo)
+## Example (extracted from a NestJS repo — adapt to the target stack)
 
 ```markdown
 # Clean Architecture
 
-## Regra-de-ouro
+## Golden rule
 
-**A dependência aponta sempre para dentro.** Camadas externas conhecem internas;
-internas não conhecem externas.
+**Dependency always points inward.** Outer layers know inner ones;
+inner ones do not know outer ones.
 
 Presentation ──► Application ──► Domain ◄── Infrastructure
 
-## Como cada camada isola a próxima
+## How each layer isolates the next
 
-### Domain isola tecnologia
+### Domain isolates technology
 \`\`\`ts
 // src/modules/identity/domain/entities/user.entity.ts
 export class User {
-  // ZERO imports de NestJS, Fastify, Mongoose.
+  // ZERO imports from NestJS, Fastify, Mongoose.
 }
 \`\`\`
 
-Reforçado por `eslint-plugin-boundaries` — ver [eslint-boundaries.md](../conventions/eslint-boundaries.md).
+Reinforced by `eslint-plugin-boundaries` — see [eslint-boundaries.md](../conventions/eslint-boundaries.md).
 
-## Sintomas de violação
-- `import { MongooseUserRepository }` em `presentation/` → errado.
-- `import '@nestjs/common'` em `domain/` → errado.
+## Symptoms of violation
+- `import { MongooseUserRepository }` in `presentation/` → wrong.
+- `import '@nestjs/common'` in `domain/` → wrong.
 ```

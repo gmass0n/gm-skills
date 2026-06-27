@@ -1,95 +1,95 @@
-# Template: `report.md` (na pasta da sessão)
+# Template: `report.md` (in the session folder)
 
-O cursor leve de uma caça a bug. Vive na **pasta da sessão** `docs/debug/<slug>/report.md`, com o `session.jsonl` de captura ao lado (mesma pasta — tudo da sessão centralizado). Quando o bug está numa feature especificada, pode viver em `docs/specs/<feature>/debug-<slug>.md` para herdar o contexto da spec; nesse caso o `session.jsonl` ainda fica em `docs/debug/<slug>/`. Não é um contrato eterno como `spec.md`/`plan.md` — é **andaime descartável**: serve para resumir a caça se a sessão morrer e para guardar o manifesto de limpeza. O registro durável de verdade é o teste de regressão no git; este `.md` pode ser arquivado ou apagado depois do fix.
+The lightweight cursor of a bug hunt. It lives in the **session folder** `docs/debug/<slug>/report.md`, with the capture `session.jsonl` beside it (same folder — everything for the session centralized). When the bug is in a specified feature, it can live in `docs/specs/<feature>/debug-<slug>.md` to inherit the spec's context; in that case the `session.jsonl` still lives in `docs/debug/<slug>/`. It's not an eternal contract like `spec.md`/`plan.md` — it's **disposable scaffolding**: it serves to summarize the hunt if the session dies and to hold the cleanup manifest. The real durable record is the regression test in git; this `.md` can be archived or deleted after the fix.
 
-## Idioma
+## Language
 
-Travado pelo prompt inicial do `sdd:debug` (`lang: pt|en` no frontmatter). Tudo no mesmo idioma.
+`report.md` is **always written in English**, regardless of the conversation language. The `lang: pt|en` key in the frontmatter records the language of the conversation with the human (interview + live narration) — it never changes the file content. Detected from the initial `sdd:debug` prompt.
 
-## Estrutura
+## Structure
 
 ```markdown
 ---
 title: debug — <slug>
-lang: pt | en
-status: investigando | fix-aplicado | resolvido   # fix-aplicado = GREEN do fix-executor; resolvido só com closing-gate verde E confirmacao-humana
-debug-tag: DEBUG-a4f2                  # hash único da sessão — o manifesto de limpeza
-feature: <feature ou ->               # link à spec se houver; "-" se bug avulso
-repos: [<repo-principal>]             # repos tocados na sessão; >1 só em bug multi-repo (cada um precisa de grep-zero no F8)
-confirmacao-humana: <- | sim (data)>  # carimbo do AskUserQuestion final; sem ele, status nunca é "resolvido"
-generated: <data>
+lang: pt | en                          # conversation language (interview + narration); report.md is always English
+status: investigating | fix-applied | resolved   # fix-applied = fix-executor GREEN; resolved only with closing-gate green AND human-confirmation
+debug-tag: DEBUG-a4f2                  # unique session hash — the cleanup manifest
+feature: <feature or ->               # link to the spec if any; "-" if standalone bug
+repos: [<main-repo>]                  # repos touched in the session; >1 only in multi-repo bug (each needs grep-zero in F8)
+human-confirmation: <- | yes (date)>  # stamp from the final AskUserQuestion; without it, status is never "resolved"
+generated: <date>
 ---
 
-# Debug: <sintoma em uma linha>
+# Debug: <one-line symptom>
 
-## Sintoma
-<a mensagem/stack/valor errado exato. tipo: a (backend) | b (frontend) | c (fluxo silencioso).
- Para tipo c, escreva "esperado X, obtido Y" — sem isso, fluxo silencioso é invisível.>
+## Symptom
+<the exact message/stack/wrong value. type: a (backend) | b (frontend) | c (silent flow).
+ For type c, write "expected X, got Y" — without this, a silent flow is invisible.>
 
 ## Repro
-<como dispara o bug, minimizado ao menor cenário que ainda falha. 1-3 linhas.
- Marque quem dispara: [agente] roteirizável (teste/curl/navigate), [agente-playwright] fluxo
- backend com auth no browser (curl falha sem token), ou [humano] manual (login/estado).>
+<how to trigger the bug, minimized to the smallest scenario that still fails. 1-3 lines.
+ Mark who triggers: [agent] scriptable (test/curl/navigate), [agent-playwright] backend
+ flow with auth in the browser (curl fails without token), or [human] manual (login/state).>
 
-## Hipóteses
-<2-5, cada uma: mecanismo — onde (camada/arquivo) — status + evidência.
- Status: ✅ confirmada | ❌ refutada | ❓ não testada. A evidência é a linha exata do .jsonl.>
-- H1: <mecanismo> — <arquivo> — ❓ não testada
-- H2: <mecanismo> — <arquivo> — ✅ confirmada (evidência: [DEBUG-a4f2] em foo.ts:42 mostrou user=null)
-- H3: <mecanismo> — <arquivo> — ❌ refutada (evidência: branch B nunca foi tomado no .jsonl)
+## Hypotheses
+<2-5, each one: mechanism — where (layer/file) — status + evidence.
+ Status: ✅ confirmed | ❌ refuted | ❓ untested. The evidence is the exact .jsonl line.>
+- H1: <mechanism> — <file> — ❓ untested
+- H2: <mechanism> — <file> — ✅ confirmed (evidence: [DEBUG-a4f2] in foo.ts:42 showed user=null)
+- H3: <mechanism> — <file> — ❌ refuted (evidence: branch B was never taken in the .jsonl)
 
-## Subagentes spawnados (manifesto de orquestração)
-<cada subagente comissionado, para auditar a pureza do orquestrador e resumir se a sessão cair.
- O orquestrador não aparece aqui — ele só comissiona e sintetiza.>
-- Explore (F2/F5): <o que leu>
-- instrumentation-executor (F3): <arquivos instrumentados> — ou "—" se colapsado no fix-executor
-- fix-executor (F6): <o fix + commit>
-- closing-gate (F8): <veredito>
+## Spawned subagents (orchestration manifest)
+<each commissioned subagent, to audit the orchestrator's purity and summarize if the session drops.
+ The orchestrator doesn't appear here — it only commissions and synthesizes.>
+- Explore (F2/F5): <what it read>
+- instrumentation-executor (F3): <instrumented files> — or "—" if collapsed into the fix-executor
+- fix-executor (F6): <the fix + commit>
+- closing-gate (F8): <verdict>
 
-## Instrumentação (manifesto de limpeza)
-<tudo que o closing-gate vai remover. Sem isto, instrumentação órfã fica para sempre se a sessão cair.
- Cada sender tem um comentário-âncora `// DEBUG-<hash> (sdd:debug) — remover na limpeza` na linha de cima.
- Multi-repo: nomeie o repo de cada sender — o grep-zero roda em cada um.>
+## Instrumentation (cleanup manifest)
+<everything the closing-gate will remove. Without this, orphan instrumentation stays forever if the session drops.
+ Each sender has an anchor comment `// DEBUG-<hash> (sdd:debug) — remove on cleanup` on the line above.
+ Multi-repo: name the repo of each sender — grep-zero runs in each one.>
 - debug-tag: DEBUG-a4f2
-- senders em: <repo-A> src/.../foo.ts:42, <repo-B> src/.../bar.ts:88
-- server: porta 9999 → docs/debug/<slug>/session.jsonl  (ou file-write direto, se sem rede)
-- serviço(s) reiniciado(s) para instrumentar: <ex: api (Node 24, node dist/main.js)> — restaurar no F8: sim/não
+- senders in: <repo-A> src/.../foo.ts:42, <repo-B> src/.../bar.ts:88
+- server: port 9999 → docs/debug/<slug>/session.jsonl  (or direct file-write, if no network)
+- service(s) restarted to instrument: <e.g. api (Node 24, node dist/main.js)> — restore in F8: yes/no
 
-## Causa raiz
-<a função/linha real onde o bug nasce + quantos callers compartilham o mesmo bug (do grep da F2).
- Se há spec: o REQ-ID violado, ou "comportamento nunca especificado".>
+## Root cause
+<the real function/line where the bug is born + how many callers share the same bug (from the F2 grep).
+ If there's a spec: the violated REQ-ID, or "behavior never specified".>
 
 ## Fix
-<arquivo:linha + 1 frase do que mudou. Cite a invariante de context.md que o fix respeita
- e o padrão da camada que ele segue.>
+<file:line + 1 sentence of what changed. Cite the context.md invariant the fix respects
+ and the layer pattern it follows.>
 
-### Prova TDD (do fix-executor)
-<a prova de R2 — RED antes de GREEN. Sem o RED, o teste passou trivialmente e não prova nada.>
-- comando: <yarn test <spec> / pytest ...>
-- RED (antes do fix): <saída colada — o teste falhou>
-- GREEN (depois do fix): <saída colada — o teste passou>
-- Se pulado (escape honesto): "sem teste — <motivo>", registrado como dívida.
+### TDD proof (from the fix-executor)
+<the proof of R2 — RED before GREEN. Without the RED, the test passed trivially and proves nothing.>
+- command: <yarn test <spec> / pytest ...>
+- RED (before the fix): <pasted output — the test failed>
+- GREEN (after the fix): <pasted output — the test passed>
+- If skipped (honest escape): "no test — <reason>", recorded as debt.
 
-## Closing-gate (veredito — o gate duplo da F8)
-<o closing-gate prova; status só vira "resolvido" com todos marcados.>
-- [ ] re-repro com a MESMA instrumentação viva = delta provado no mesmo `.jsonl` (antes: <ex. `stage:event-fired` ausente / valor errado> → depois: <ex. presente / valor certo>)
-- [ ] teste de regressão verde
-- [ ] grep-zero `DEBUG-<hash>` no código — **em cada repo de `repos:`** (só depois do delta acima)
-- [ ] processo do debug server morto
-- [ ] `session.jsonl` apagado (depois de lido o delta, antes do grep-zero)
-- [ ] serviço(s) do dev reiniciado(s) na F4 restaurado(s) ao estado original
-- [ ] humano confirmou que o sintoma original sumiu (`confirmacao-humana`)
+## Closing-gate (verdict — the F8 double gate)
+<the closing-gate proves; status only becomes "resolved" with all marked.>
+- [ ] re-repro with the SAME live instrumentation = delta proven in the same `.jsonl` (before: <e.g. `stage:event-fired` missing / wrong value> → after: <e.g. present / right value>)
+- [ ] regression test green
+- [ ] grep-zero `DEBUG-<hash>` in the code — **in each repo of `repos:`** (only after the delta above)
+- [ ] debug server process killed
+- [ ] `session.jsonl` deleted (after the delta is read, before grep-zero)
+- [ ] dev service(s) restarted in F4 restored to original state
+- [ ] human confirmed the original symptom is gone (`human-confirmation`)
 
-## Tentativas (só se houve circuit breaker)
-<as hipóteses que não seguraram, para não repeti-las ao re-hipotetizar. Apague se nunca disparou.>
+## Attempts (only if there was a circuit breaker)
+<the hypotheses that didn't hold, so as not to repeat them when re-hypothesizing. Delete if it never fired.>
 ```
 
-## Regras de preenchimento
+## Filling rules
 
-- **Persistência incremental, rewrite never append.** As hipóteses entram aqui no momento em que surgem (F2), com status `❓`; viram `✅`/`❌` conforme a evidência da F4. O manifesto de instrumentação entra na F3, antes de qualquer reprodução. **Reescreva o report a cada fase que fecha — nunca faça append; mantenha-o ~300–400 tokens.** É o state.md do debug (não crie outro): um cursor, não um log.
-- **`debug-tag` é o manifesto.** O hash único (`DEBUG-<hash>`) aparece no frontmatter e na seção de instrumentação. A F8 faz `grep` por ele para remover toda a instrumentação — um hash esquecido é um `console.log` órfão no diff.
-- **Sintoma do tipo c precisa de "esperado vs obtido".** Sem erro que grite, o que define o bug é a divergência. Escreva-a explícita.
-- **Causa raiz nomeia callers.** O número de callers que compartilham o bug é o que justifica o fix na função compartilhada em vez de no caller nomeado.
-- **A prova TDD é registro durável.** O `.md` é descartável; o teste no git não. O RED colado prova que o teste foi escrito antes do fix. Se o teste foi pulado, a dívida fica escrita aqui — não some no silêncio.
-- **`status` é um gate real, em dois saltos.** `investigando` → `fix-aplicado` (o fix-executor fechou o GREEN, mas nada ainda confirmou que resolve o sintoma) → `resolvido` (**só** com todos os checkboxes do closing-gate marcados **e** `confirmacao-humana` preenchida). Pular de `investigando` direto para `resolvido` é exatamente a falha que esta skill existe para impedir.
-- **Pasta-por-sessão + multi-repo.** Tudo da sessão mora em `docs/debug/<slug>/` (report + `session.jsonl`), num único repo mesmo quando o bug cruza repos — a captura converge num só `.jsonl`. Se `repos:` tem mais de um, o manifesto nomeia o repo de cada sender e o grep-zero do F8 roda em cada um; qualquer serviço reiniciado para instrumentar volta ao estado original no fechamento.
+- **Incremental persistence, rewrite never append.** The hypotheses enter here the moment they arise (F2), with status `❓`; they become `✅`/`❌` per the F4 evidence. The instrumentation manifest enters in F3, before any reproduction. **Rewrite the report at each phase that closes — never append; keep it ~300–400 tokens.** It's the debug's state.md (don't create another): a cursor, not a log.
+- **`debug-tag` is the manifest.** The unique hash (`DEBUG-<hash>`) appears in the frontmatter and in the instrumentation section. F8 does a `grep` for it to remove all instrumentation — a forgotten hash is an orphan `console.log` in the diff.
+- **Type c symptom needs "expected vs got".** With no error that screams, what defines the bug is the divergence. Write it explicitly.
+- **Root cause names callers.** The number of callers that share the bug is what justifies the fix in the shared function instead of in the named caller.
+- **The TDD proof is a durable record.** The `.md` is disposable; the test in git is not. The pasted RED proves the test was written before the fix. If the test was skipped, the debt is written here — it doesn't vanish in silence.
+- **`status` is a real gate, in two jumps.** `investigating` → `fix-applied` (the fix-executor closed the GREEN, but nothing has yet confirmed it resolves the symptom) → `resolved` (**only** with all the closing-gate checkboxes marked **and** `human-confirmation` filled). Jumping from `investigating` straight to `resolved` is exactly the failure this skill exists to prevent.
+- **Folder-per-session + multi-repo.** Everything for the session lives in `docs/debug/<slug>/` (report + `session.jsonl`), in a single repo even when the bug crosses repos — the capture converges in one `.jsonl`. If `repos:` has more than one, the manifest names the repo of each sender and the F8 grep-zero runs in each one; any service restarted to instrument returns to its original state at closing.
