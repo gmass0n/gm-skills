@@ -21,8 +21,9 @@
 //   node lessons.js status [--dir <d>]
 //   node lessons.js --selftest
 //
-// Signals (1:1 with the gate's emission points — see references/lessons.md):
-//   surviving_mutant | ac_gap | spec_precision_gap | spec_deviation | gate_fail
+// Signals (1:1 with the emission points — see references/lessons.md):
+//   surviving_mutant | ac_gap | spec_precision_gap | spec_deviation | gate_fail | root_cause
+//   (root_cause is emitted by sdd:debug's closing gate when a runtime-confirmed bug had N affected callers)
 //
 // ponytail: pure stdlib (fs+path), zero deps, zero build. Dedup is exact-after-normalization
 // (lowercase, punctuation stripped) — no embeddings; near-duplicate phrasings are an accepted limitation.
@@ -31,7 +32,7 @@ const fs = require('fs');
 const path = require('path');
 
 const DEFAULT_DIR = 'docs/codebase/lessons';
-const SIGNALS = ['surviving_mutant', 'ac_gap', 'spec_precision_gap', 'spec_deviation', 'gate_fail'];
+const SIGNALS = ['surviving_mutant', 'ac_gap', 'spec_precision_gap', 'spec_deviation', 'gate_fail', 'root_cause'];
 const DEFAULTS = { promote_threshold: 2, window_days: 45, quarantine_threshold: 2, render_top_n: 10 };
 
 // --- arg parsing (tiny; --flag value, plus bare --selftest) ----------------------------------------
@@ -231,6 +232,14 @@ function selftest() {
     () => cmdAdd(tmp, { signal: 'bogus', lesson: 'x', source: 'f:1' }, D('2026-01-01')),
     /--signal must be/, 'add must refuse an unknown signal'
   );
+
+  // root_cause is an accepted signal (sdd:debug emits it) — isolated dir so it doesn't skew counts below
+  const tmpRC = fs.mkdtempSync(path.join(os.tmpdir(), 'lessons-'));
+  assert.doesNotThrow(
+    () => cmdAdd(tmpRC, { signal: 'root_cause', lesson: 'shared mapper missed null upstream', source: 'm.ts:7', feature: 'dbg' }, D('2026-01-01')),
+    'root_cause must be an accepted signal'
+  );
+  fs.rmSync(tmpRC, { recursive: true, force: true });
 
   // first add → candidate
   let r = cmdAdd(tmp, { signal: 'ac_gap', lesson: 'Guard the empty list before mapping', source: 'a.ts:10', feature: 'feat-A' }, D('2026-01-01'));

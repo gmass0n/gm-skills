@@ -14,7 +14,9 @@ Why `docs/codebase/` and not `docs/specs/`: `docs/specs/` is git-ignored in thes
 
 ## WRITE — exact points and order in the closing gate
 
-The closing gate (`implement/SKILL.md` › "The closing gate") has multiple exit points. Emit each `add` **in the order the gate reaches the signal**, not batched at the very end — a dead session must not lose the signals already produced. Each `add` is one shell call:
+Two skills write lessons: **`sdd:implement`'s closing gate** (the signals below) and **`sdd:debug`'s closing gate** (`root_cause` only — see "sdd:debug" at the end of this section). Both call the same script, same grounding gate.
+
+The implement closing gate (`implement/SKILL.md` › "The closing gate") has multiple exit points. Emit each `add` **in the order the gate reaches the signal**, not batched at the very end — a dead session must not lose the signals already produced. Each `add` is one shell call:
 
 ```
 node <skill>/scripts/lessons.js add --signal <s> --lesson "<one-line lesson>" --source <grounding> [--feature <name>] [--scope <CONCERN-007|role>]
@@ -30,6 +32,10 @@ Sequence, walking the gate:
 
 A **clean PASS writes nothing** — lessons come from real failures only.
 
+#### sdd:debug — `root_cause` from a confirmed hunt
+
+`sdd:debug`'s closing gate (F8) emits **one** `root_cause` lesson **only when** the hunt confirmed a cause by runtime **and** F5 found the cause was *shared* — N callers had the same bug, or the fix had to respect an enforced invariant the original code broke. That's the durable, project-local pattern worth carrying forward (e.g. *"the shared X mapper drops nulls from upstream Y — guard at the mapper, not per-caller"*). `--source` is the shared `file:line` the fix landed on; `--scope` is ideally the touched `CONCERN-NNN`/role. A point bug with a single caller and no invariant in play writes nothing — it's not a reusable lesson. This is the same knowledge F8 already offers to push to `sdd:codebase diff`; the lesson is the lighter-weight, automatically-loaded half of that.
+
 ### Grounding gate (non-negotiable)
 
 `add` **refuses** (exit ≠ 0) without `--source`: *"a lesson with no grounding is an opinion, not a lesson."* `--source` is the evidence — a `file:line`, a `grep:<pattern>`, a `gate:<name>`. No source → no lesson.
@@ -43,6 +49,7 @@ A **clean PASS writes nothing** — lessons come from real failures only.
 | `spec_precision_gap` | item B — vague AC / assertion not matching the outcome |
 | `spec_deviation` | a `// SPEC_DEVIATION` marker the gate collected |
 | `gate_fail` | build / lint / typecheck gate failed |
+| `root_cause` | `sdd:debug` closing gate — a runtime-confirmed bug whose root cause spanned **N callers** (or violated an enforced invariant); the lesson is the pattern, grounded at the shared `file:line` |
 
 ### `--scope` — your differential over a map-less tool
 
