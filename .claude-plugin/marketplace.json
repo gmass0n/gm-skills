@@ -17,6 +17,11 @@
       "name": "status-report",
       "source": "./plugins/status-report",
       "description": "Generate a polished, leadership-ready status report (and optional enterprise action plan) for any fix, incident or in-flight change — styled for WhatsApp/email, interviewing you one question at a time when context is thin."
+    },
+    {
+      "name": "triage",
+      "source": "./plugins/triage",
+      "description": "Automated Jira triage pipeline: pull tasks from the boards you name, filter by size in three discarding gates, open a draft WIP PR on Bitbucket per surviving task with a plain-language summary, pause for your approval, then deliver the approved ones through the SDD TDD loop and flip the draft to Ready. Reuses the sdd plugin's plan/implement methods; nothing runs to completion without your checkpoint."
     }
   ]
 }
