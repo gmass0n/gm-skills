@@ -1,0 +1,8 @@
+{
+  "name": "prs-review",
+  "description": "Structured code review of one or more Pull Requests, Bitbucket and GitHub in the same batch. One subagent per PR (parallel, multi-repo) applies the sdd plugin's review doctrine — blind lenses plus adversarial verification — over the diff fetched via the matching MCP, and consolidates a single approved/rejected verdict with blockers, warnings and praise, written to a ClickUp-ready .txt.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Gabriel Masson"
+  }
+}

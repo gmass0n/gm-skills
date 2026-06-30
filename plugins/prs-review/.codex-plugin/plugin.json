@@ -1,0 +1,21 @@
+{
+  "name": "prs-review",
+  "version": "0.1.0",
+  "description": "Structured code review of one or more Pull Requests, Bitbucket and GitHub in the same batch. One subagent per PR (parallel, multi-repo) applies the sdd plugin's review doctrine — blind lenses plus adversarial verification — over the diff fetched via the matching MCP, and consolidates a single approved/rejected verdict with blockers, warnings and praise, written to a ClickUp-ready .txt.",
+  "author": "Gabriel Masson",
+  "repository": "https://github.com/gmass0n/gm-skills",
+  "license": "MIT",
+  "keywords": [
+    "code-review",
+    "pull-request",
+    "bitbucket",
+    "github",
+    "multi-repo"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "PRs Review",
+    "shortDescription": "Multi-platform, multi-repo PR review with one verdict, reusing the sdd review doctrine.",
+    "category": "Productivity"
+  }
+}

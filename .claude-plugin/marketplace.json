@@ -22,6 +22,11 @@
       "name": "triage",
       "source": "./plugins/triage",
       "description": "Automated Jira triage pipeline: pull tasks from the boards you name, filter by size in three discarding gates, open a draft WIP PR on Bitbucket per surviving task with a plain-language summary, pause for your approval, then deliver the approved ones through the SDD TDD loop and flip the draft to Ready. Reuses the sdd plugin's plan/implement methods; nothing runs to completion without your checkpoint."
+    },
+    {
+      "name": "prs-review",
+      "source": "./plugins/prs-review",
+      "description": "Structured code review of one or more Pull Requests, Bitbucket and GitHub in the same batch. One subagent per PR (parallel, multi-repo) applies the sdd plugin's review doctrine — blind lenses plus adversarial verification — over the diff fetched via the matching MCP, and consolidates a single approved/rejected verdict with blockers, warnings and praise, written to a ClickUp-ready .txt."
     }
   ]
 }
