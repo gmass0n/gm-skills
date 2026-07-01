@@ -81,6 +81,7 @@ For each kept ticket (smallest first), briefing:
 1. **Discover the repo.** The ticket's `nature` is `<nature>`. List the workspace repos via the Bitbucket MCP and pick the slug that best matches the ticket (a `pdv-app` ticket → the POS client repo; a fiscal/backend ticket → the matching backend). If the local working directory already is that repo, use it.
 2. **Clone on demand** into a temp dir (e.g. `<scratch>/triage-<KEY>`) unless it's the local repo. Investigate the code THERE. Do NOT reject just because the code wasn't local — you have Bitbucket access.
 3. **Measure real size** against that repo, using the digest below (do NOT re-read `docs/codebase/`).
+4. **Detect the stack** of the cloned repo (Node via `package.json`, Android via `build.gradle`, etc.) and record it — Phase 4 uses it to pick the right test/lint gates.
 
 Apply two brakes and return `viable:false` if either trips:
 - **Scope brake:** the change would touch more than a handful of files, or you must open many files just to understand it → not small.
@@ -88,7 +89,7 @@ Apply two brakes and return `viable:false` if either trips:
 
 If viable, write a lean `docs/specs/<KEY>/spec.md` in the target repo from the ticket (description + acceptance criteria as the requirements; English). Return the verdict."
 
-Verdict: `{ key, viable, real_size, repo_slug, repo_path, repos, reason, spec_path }`
+Verdict: `{ key, viable, real_size, repo_slug, repo_path, stack, repos, reason, spec_path }` (`stack ∈ {node, android, other}`)
 
 **The instant 3 tickets return `viable:true`, stop spawning.** Remaining kept tickets wait for the next run.
 
@@ -115,7 +116,7 @@ Verdict: `{ key, pr_url, size, summary_ptbr, needs_clarification }`
 
 Briefing:
 
-"Read the implement method at `$SDD/implement/SKILL.md`. Run its TDD loop **inline in your own context** (you may NOT spawn subagents): for each plan task — write the failing test, run it, watch it fail (RED), implement the minimum to pass (GREEN), refactor, commit. Then run the repo gates: test suite, typecheck, lint.
+"Read the implement method at `$SDD/implement/SKILL.md`. Run its TDD loop **inline in your own context** (you may NOT spawn subagents): for each plan task — write the failing test, run it, watch it fail (RED), implement the minimum to pass (GREEN), refactor, commit. Then run the gates for this repo's stack (`stack = <stack>`): Node → project `test`/`typecheck`/`lint` scripts; Android → `./gradlew test`/`lint`. Never run a Node gate against a Gradle repo. If the repo has no test harness, report it — don't fake a green.
 
 Code discipline (ponytail): fix the **root cause** — grep the callers of any function you touch, don't patch only the path the ticket names. Prefer stdlib and existing helpers over new code. Ship the smallest diff that works; no speculative scaffolding.
 

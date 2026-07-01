@@ -115,7 +115,9 @@ Returns only `{ key, pr_url, size, summary_ptbr, needs_clarification }`.
 
 ## Phase 4 — Deliver (only approved tickets)
 
-For each approved ticket, spawn **one** `balanced` subagent that reads `sdd:implement/SKILL.md` and **runs its TDD loop inline** in its own context — write the failing test, watch it fail, make it pass, refactor, commit — then runs the repo gates (test suite, typecheck, lint). It executes the loop itself rather than invoking the skill, because the skill is an orchestrator that would need to spawn sub-subagents, which rule 1 forbids; small tickets are exactly the inline ramp-down the skill itself permits.
+For each approved ticket, spawn **one** `balanced` subagent that reads `sdd:implement/SKILL.md` and **runs its TDD loop inline** in its own context — write the failing test, watch it fail, make it pass, refactor, commit — then runs the repo gates. It executes the loop itself rather than invoking the skill, because the skill is an orchestrator that would need to spawn sub-subagents, which rule 1 forbids; small tickets are exactly the inline ramp-down the skill itself permits.
+
+**Gates are stack-agnostic — detect, don't assume.** The target repos span stacks (Node backends, an Android PDV client, others). The subagent detects the stack from the cloned repo and runs that stack's real gates: Node (`package.json`) → the project's `test`/`typecheck`/`lint` scripts (jest, etc.); Android (`build.gradle`) → `./gradlew test`/`lint` (JUnit); and so on. The Phase 2 verdict already recorded the stack — pass it in the briefing. Never run `npm test` against a Gradle project; a wrong gate is a false green. If a repo genuinely has no test harness, say so in the verdict rather than faking a pass.
 
 The implementation code follows **ponytail** discipline: fix the root cause (grep the callers, not just the path the ticket names), reach for stdlib/existing helpers before new code, and ship the smallest diff that works — no scaffolding that the review will only have to flag and tear out.
 
