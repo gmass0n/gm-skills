@@ -121,6 +121,8 @@ For each approved ticket, spawn **one** `balanced` subagent that reads `sdd:impl
 
 The implementation code follows **ponytail** discipline: fix the root cause (grep the callers, not just the path the ticket names), reach for stdlib/existing helpers before new code, and ship the smallest diff that works — no scaffolding that the review will only have to flag and tear out.
 
+The subagent **re-anchors on the live branch** before editing (line numbers from Phase 2/3 may be stale) and, after committing, **refreshes the PR description** so it reflects the delivered fix + tests instead of the plan-only text Phase 3 wrote.
+
 Returns `{ key, status, tests, commits }`.
 
 ## Phase 5 — Review gate (blind, before Ready)
@@ -153,3 +155,5 @@ After the run, give the human a compact summary: which tickets were swept, which
 - **Don't auto-deliver a ticket with an open `[NEEDS CLARIFICATION]`** or a cross-repo contract change — those are the human's call.
 - **Don't flip a PR to Ready before the review passes clean.**
 - **Don't guess an ambiguous ticket into a plan.** Ambiguous = rejected. That refusal is the safety feature, not a failure.
+- **Don't trust a line number from an earlier phase.** Branches move; a `file:123` from Phase 2 may be `file:456` by Phase 4. Every phase re-anchors on the symbol/pattern in the *current* branch before editing or citing.
+- **Don't leave a Ready PR describing work that's already done as "not yet implemented."** Phase 3 opens the PR with a plan-only description; Phase 4 must refresh it to state what was actually changed, tested, and gated — otherwise the human reviewer is misled.

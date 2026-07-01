@@ -105,7 +105,7 @@ Then, via the Bitbucket MCP:
 - **fetch the target repo's branching model** (`getRepositoryBranchingModel`) and read its development branch + branch prefixes — do NOT assume `develop`/`type/`,
 - create branch `<repo-prefix>/<KEY>-short-desc` off that development branch (e.g. `fix/<KEY>-...` off `development` for pos-facil-api),
 - commit the `docs/specs/<KEY>/` artifacts,
-- open a **draft** PR (base = that development branch) titled `[TYPE] #<KEY> - Description` with a **Portuguese** description: 2-4 plain sentences on what the ticket is and how it will be implemented, plus a `needs manual follow-up` note if applicable.
+- open a **draft** PR (base = that development branch) titled `[TYPE] #<KEY> - Description` with a **Portuguese** description: 2-4 plain sentences on what the ticket is and how it will be implemented, a note that this PR currently carries only the spec/plan (the fix comes after approval — Phase 4 will refresh this text), plus a `needs manual follow-up` note if applicable.
 
 Return the verdict only."
 
@@ -119,9 +119,15 @@ Briefing:
 
 "Read the implement method at `$SDD/implement/SKILL.md`. Run its TDD loop **inline in your own context** (you may NOT spawn subagents): for each plan task — write the failing test, run it, watch it fail (RED), implement the minimum to pass (GREEN), refactor, commit. Then run the gates for this repo's stack (`stack = <stack>`): Node → project `test`/`typecheck`/`lint` scripts; Android → `./gradlew test`/`lint`. Never run a Node gate against a Gradle repo. If the repo has no test harness, report it — don't fake a green.
 
+**Re-anchor against the current code — don't trust line numbers from earlier phases.** The Phase 2/3 verdicts cite `file:line`, but branches move and those numbers go stale (a real run saw a cited `:3817` that was actually `:4727` on the live branch). Before editing, grep/search the current branch for the symbol or pattern named, and anchor to what you find now. The earlier phase told you *what* and *where roughly*; the live code tells you the exact line.
+
 Code discipline (ponytail): fix the **root cause** — grep the callers of any function you touch, don't patch only the path the ticket names. Prefer stdlib and existing helpers over new code. Ship the smallest diff that works; no speculative scaffolding.
 
-Work on branch `type/<KEY>-...` (already exists from Phase 3). Use the digest below; do not re-read the map. Return the verdict."
+Work on the ticket's existing branch (created in Phase 3). Use the digest below; do not re-read the map.
+
+**Update the PR description after delivering.** The Phase 3 description was written when only the spec/plan existed and says the fix is *not yet implemented*. Once you've committed the fix + tests, update the PR description (Bitbucket MCP `updatePullRequest`) so it reflects what was actually done: what changed, the tests added and their result, gate status. A Ready PR whose description still says 'not implemented' misleads the human reviewer. Keep it Portuguese.
+
+Return the verdict."
 
 Verdict: `{ key, status, tests, commits }` (`status ∈ {done, blocked}`; if blocked, include a one-line reason).
 
@@ -133,7 +139,7 @@ Lenses: `correctness`, `security`, `performance`, `architecture`, and `spec-alig
 
 Per-lens briefing:
 
-"You are the **<lens>** reviewer, blind to the other lenses. Read `$SDD/review/SKILL.md` and `$SDD/review/references/review-lenses.md`; apply ONLY the `<lens>` dimension's checklist **and its 'what NOT to flag' blocklist**. Review the diff of branch `type/<KEY>-...` vs its base. Report only grounded findings as `file:Lline` with a concrete impact and a fix. Honor the blocklist — a finding that the blocklist excludes is a false positive, do not raise it. Return the verdict."
+"You are the **<lens>** reviewer, blind to the other lenses. Read `$SDD/review/SKILL.md` and `$SDD/review/references/review-lenses.md`; apply ONLY the `<lens>` dimension's checklist **and its 'what NOT to flag' blocklist**. Review the diff of the ticket's branch (`<branch>`) vs its base. Report only grounded findings as `file:Lline` **anchored to the current branch** (line numbers from earlier phases may be stale — verify against the diff you're reading). A finding that the blocklist excludes is a false positive; do not raise it. Return the verdict."
 
 Per-lens verdict: `{ lens, findings: [{ id, file_line, severity, problem, fix }] }`
 
