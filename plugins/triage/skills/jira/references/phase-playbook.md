@@ -102,9 +102,10 @@ Per viable ticket, briefing:
 "Read the plan method at `$SDD/plan/SKILL.md` and follow it to produce `docs/specs/<KEY>/plan.md` from `<spec_path>`. Execute the method yourself — do NOT invoke any skill, do NOT spawn subagents. English body. Anchor every decision to the digest below. If you cannot close the plan without an open `[NEEDS CLARIFICATION]`, finish anyway and set `needs_clarification:true`.
 
 Then, via the Bitbucket MCP:
-- create branch `type/<KEY>-short-desc` off the repo's develop base,
+- **fetch the target repo's branching model** (`getRepositoryBranchingModel`) and read its development branch + branch prefixes — do NOT assume `develop`/`type/`,
+- create branch `<repo-prefix>/<KEY>-short-desc` off that development branch (e.g. `fix/<KEY>-...` off `development` for pos-facil-api),
 - commit the `docs/specs/<KEY>/` artifacts,
-- open a **draft** PR titled `[TYPE] #<KEY> - Description` with a **Portuguese** description: 2-4 plain sentences on what the ticket is and how it will be implemented, plus a `needs manual follow-up` note if applicable.
+- open a **draft** PR (base = that development branch) titled `[TYPE] #<KEY> - Description` with a **Portuguese** description: 2-4 plain sentences on what the ticket is and how it will be implemented, plus a `needs manual follow-up` note if applicable.
 
 Return the verdict only."
 
@@ -146,10 +147,16 @@ Final verdict: `{ key, verdict, ready, open_findings }`
 
 ## Git, branch, and PR conventions
 
-These match the project's contributing rules — every subagent that commits or opens a PR must honor them:
+**Conventions are per-repo, not global — detect them, don't assume.** The triage spans many repos (seru-*, pos-facil-*, pra-notas-*, pdv-facil) and they do NOT share a branching model. Before creating a branch or PR, the Phase 3 subagent MUST fetch the target repo's branching model via the Bitbucket MCP (`getRepositoryBranchingModel`) and use it:
+
+- **Base branch:** the repo's *development* branch from the branching model — it may be `develop` (seru) OR `development` (pos-facil-api) OR `master`. Never hard-code `develop`.
+- **Branch prefix:** the repo's declared prefixes — e.g. seru uses `feature/`/`type/`; pos-facil-api uses `feat/`/`fix/`. Match a bug ticket to the bugfix prefix, a feature to the feature prefix.
+- **Branch name:** `<prefix>JIRA-KEY-short-desc`.
+
+The defaults below are the *seru* convention and apply only when the branching model doesn't say otherwise:
 
 - **Commit:** `type(scope): subject` — Conventional Commits, imperative, lowercase, no trailing dot.
-- **Branch:** `type/JIRA-KEY-short-desc` off `develop` (or the repo's stated base).
+- **Branch:** `<repo-prefix>/JIRA-KEY-short-desc` off the repo's development branch.
 - **PR title:** `[TYPE] #JIRA-KEY - Description`.
 - **English** for commits, branches, PR titles, `spec.md`, and the `plan.md` body. **Portuguese** only for the `plan.md` summary block and the PR description.
 - **Never** add an AI `Co-authored-by` trailer to any commit or PR.
