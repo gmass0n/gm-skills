@@ -50,7 +50,10 @@ Per-phase tier (cost-optimized — only the review gate pays for `deep`):
 
 ## Inputs
 
-`/triage:jira <boards>` — comma-separated Jira board/project keys (e.g. `CL,DEL`). A scheduled routine hard-codes its boards. No boards given and none configured → ask once which boards to sweep, then proceed.
+`/triage:jira <boards> [--status=<status>]`
+
+- `<boards>` — comma-separated Jira board/project keys (e.g. `SUS`, `CL,DEL`). A scheduled routine hard-codes its boards. No boards given and none configured → ask once which boards to sweep, then proceed.
+- `--status=<status>` — optional. The Jira status to sweep. **Defaults to `Priorizado`** when omitted — that is the intended entry queue: tickets a human already prioritized, so they're the safe pool to triage. Pass a different status only to override for a one-off run. The scheduled routine hard-codes both boards and status.
 
 ## Preconditions — refuse rather than guess
 
@@ -74,7 +77,7 @@ Spawn **one** `fast` subagent to read `docs/codebase/context.md` (selectively �
 
 ## Phase 1 — Filter (description only, never opens code)
 
-Fetch the candidate tickets from the named boards (open/backlog status). Spawn **one** `fast` subagent that receives **all** the tickets at once and classifies each **from its description alone** — it must not read code. For each ticket it returns a size (`PP|P|M|G`), a one-line reason, and a guessed target repo.
+Fetch the candidate tickets from the named boards, filtered to the requested status (default `Priorizado`). Spawn **one** `fast` subagent that receives **all** the tickets at once and classifies each **from its description alone** — it must not read code. For each ticket it returns a size (`PP|P|M|G`), a one-line reason, and a guessed target repo.
 
 Drop `G`, anything flagged complex, and anything ambiguous. Keep `PP|P|M`, **ordered smallest first**. One subagent handles all ten because classification is trivial text work — spawning ten would waste tokens for no isolation benefit.
 

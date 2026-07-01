@@ -53,7 +53,13 @@ Hold the returned digest in the orchestrator. Inject it verbatim into Phases 2�
 
 **Tier:** `fast`. **One subagent for ALL tickets.**
 
-First, you (orchestrator) fetch the tickets via the Jira MCP from the named boards, open/backlog status. Pass the **list of `{key, title, description, labels, components}`** to the single subagent.
+First, you (orchestrator) fetch the tickets via the Jira MCP. Build the JQL from the boards and the status (default `Priorizado`):
+
+```
+project in (<boards>) AND status = "<status>" ORDER BY created ASC
+```
+
+e.g. for `/triage:jira SUS` → `project = SUS AND status = "Priorizado" ORDER BY created ASC`. If `status` contains spaces or accents, keep it quoted. Pass the **list of `{key, title, description, labels, components}`** to the single subagent.
 
 Briefing: "Classify each ticket **from its text alone**. Do NOT read any code. For each return `{key, size, reason, repo_guess}` where `size ∈ {PP,P,M,G}` (PP=trivial, P=small, M=medium, G=large). Flag clearly-complex or ambiguous tickets as `G`. `reason` is one line."
 

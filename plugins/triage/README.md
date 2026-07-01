@@ -20,8 +20,12 @@ It reuses the **method** of the `sdd` plugin (plan / implement / review) without
 ## Usage
 
 ```
-/triage:jira CL,DEL          # sweep boards CL and DEL
+/triage:jira SUS                      # sweep board SUS, status "Priorizado" (default)
+/triage:jira CL,DEL                   # sweep boards CL and DEL, status "Priorizado"
+/triage:jira SUS --status=Ready       # override the status for a one-off run
 ```
+
+Status defaults to **`Priorizado`** — the queue of human-prioritized tickets that are safe to triage.
 
 A scheduled routine can call it twice a day with its boards hard-coded; it runs through the checkpoint and notifies you to approve.
 
@@ -38,7 +42,7 @@ A scheduled routine can call it twice a day with its boards hard-coded; it runs 
           read docs/codebase/ + lessons ONCE  ──▶  compact digest  (injected into every later phase)
 
  PHASE 1  Filter              [fast · 1 subagent, all tickets at once]
-          ~10 Jira tickets ──▶ classify by DESCRIPTION ONLY (never opens code)  ──▶  PP|P|M kept, G/ambiguous dropped
+          Jira tickets in status "Priorizado" ──▶ classify by DESCRIPTION ONLY (never opens code)  ──▶  PP|P|M kept, G/ambiguous dropped
                                                                                      │ (sorted smallest-first)
  PHASE 2  Pre-triage          [balanced · sequential, 1 subagent/ticket, STOP at 3 viable]
           enter the code, measure REAL size, write spec.md
