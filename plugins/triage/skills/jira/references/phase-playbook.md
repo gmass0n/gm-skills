@@ -61,11 +61,15 @@ project in (<boards>) AND status = "<status>" ORDER BY created ASC
 
 e.g. for `/triage:jira SUS` → `project = SUS AND status = "Priorizado" ORDER BY created ASC`. If `status` contains spaces or accents, keep it quoted. Pass the **list of `{key, title, description, labels, components}`** to the single subagent.
 
-Briefing: "Classify each ticket **from its text alone**. Do NOT read any code. For each return `{key, size, reason, repo_guess}` where `size ∈ {PP,P,M,G}` (PP=trivial, P=small, M=medium, G=large). Flag clearly-complex or ambiguous tickets as `G`. `reason` is one line."
+Briefing: "Classify each ticket **from its text alone**. Do NOT read any code. For each return `{key, size, nature, ambiguous, reason}`:
+- `size ∈ {PP,P,M,G}` (PP=trivial/1-line, P=small, M=medium/one module, G=large/multi-area).
+- `nature ∈ {backend, pdv-app, unknown}` — where the change lives (POS/PDV/terminal/Clover client → `pdv-app`; server/API/data/fiscal-note generation → `backend`). **Signal only, never a filter.**
+- `ambiguous: true` when the ticket can't be acted on without a human: no identified root cause (open-ended 'investigar/analisar'), asks to 'define which rule applies', empty description, or an operational data fix that isn't code.
+- `reason`: one line."
 
-Verdict (array): `[{ key, size, reason, repo_guess }]`
+Verdict (array): `[{ key, size, nature, ambiguous, reason }]`
 
-Orchestrator then drops `G`/ambiguous, keeps `PP|P|M`, sorts smallest-first.
+Orchestrator keeps `PP|P|M` **and** `ambiguous:false`; drops the rest; sorts kept smallest-first. `nature` is carried forward (it does not drop anything) so Phase 2 knows which repo family to clone.
 
 ## Phase 2 — Pre-triage
 
@@ -73,12 +77,18 @@ Orchestrator then drops `G`/ambiguous, keeps `PP|P|M`, sorts smallest-first.
 
 For each kept ticket (smallest first), briefing:
 
-"Investigate the code paths this ticket touches, using the digest below (do NOT re-read `docs/codebase/`). Measure the real size. Apply two brakes and return `viable:false` if either trips:
-- **Scope brake:** more than a handful of files touched, or you must open many files just to understand it → not small.
-- **Multi-repo coupling:** isolated identical edits across repos are fine up to 3 repos; a contract/API change one repo's consumer must track → reject (`reason: cross-repo-contract`).
-If viable, write a lean `docs/specs/<KEY>/spec.md` from the ticket (description + acceptance criteria as the requirements; English). Return the verdict."
+"Find and clone the target repo, then investigate the real code. Steps:
+1. **Discover the repo.** The ticket's `nature` is `<nature>`. List the workspace repos via the Bitbucket MCP and pick the slug that best matches the ticket (a `pdv-app` ticket → the POS client repo; a fiscal/backend ticket → the matching backend). If the local working directory already is that repo, use it.
+2. **Clone on demand** into a temp dir (e.g. `<scratch>/triage-<KEY>`) unless it's the local repo. Investigate the code THERE. Do NOT reject just because the code wasn't local — you have Bitbucket access.
+3. **Measure real size** against that repo, using the digest below (do NOT re-read `docs/codebase/`).
 
-Verdict: `{ key, viable, real_size, repos, reason, spec_path }`
+Apply two brakes and return `viable:false` if either trips:
+- **Scope brake:** the change would touch more than a handful of files, or you must open many files just to understand it → not small.
+- **Multi-repo coupling:** isolated identical edits across repos are fine up to 3 repos; a contract/API change one repo's consumer must track → reject (`reason: cross-repo-contract`).
+
+If viable, write a lean `docs/specs/<KEY>/spec.md` in the target repo from the ticket (description + acceptance criteria as the requirements; English). Return the verdict."
+
+Verdict: `{ key, viable, real_size, repo_slug, repo_path, repos, reason, spec_path }`
 
 **The instant 3 tickets return `viable:true`, stop spawning.** Remaining kept tickets wait for the next run.
 

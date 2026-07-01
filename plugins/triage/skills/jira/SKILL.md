@@ -59,7 +59,7 @@ Per-phase tier (cost-optimized — only the review gate pays for `deep`):
 
 - **Jira (atlassian-rovo) not authenticated** → stop and tell the user to authenticate the Jira MCP first; do not fabricate a ticket list.
 - **Bitbucket MCP unavailable** → stop; the skill cannot open PRs.
-- **No `docs/codebase/` map in the repo** → warn that fidelity will be weaker and recommend running `sdd:codebase` first; proceed only if the user confirms.
+- **No `docs/codebase/` map in a target repo** → fidelity is weaker for that repo (the digest carries less). Note it in the ticket's verdict and proceed; don't hard-stop the whole run. The map is a backend-repo convention and may legitimately be absent in a client repo like `pdv-app`.
 
 ## Language
 
@@ -79,15 +79,22 @@ Spawn **one** `fast` subagent to read `docs/codebase/context.md` (selectively �
 
 Fetch the candidate tickets from the named boards, filtered to the requested status (default `Priorizado`). Spawn **one** `fast` subagent that receives **all** the tickets at once and classifies each **from its description alone** — it must not read code. For each ticket it returns a size (`PP|P|M|G`), a one-line reason, and a guessed target repo.
 
-Drop `G`, anything flagged complex, and anything ambiguous. Keep `PP|P|M`, **ordered smallest first**. One subagent handles all ten because classification is trivial text work — spawning ten would waste tokens for no isolation benefit.
+Drop `G`, anything flagged complex, and anything **ambiguous** — a ticket with no identified root cause (an open-ended "investigar/analisar"), one that asks a human to "define which rule applies", an empty description, or an operational data fix that isn't a code change. Ambiguity, not just size, is a rejection reason: an autonomous agent must not guess a fix that the ticket itself hasn't pinned down. Keep `PP|P|M` that are unambiguous, **ordered smallest first**. One subagent handles all tickets at once because classification is trivial text work — spawning one per ticket would waste tokens for no isolation benefit.
+
+The subagent also tags each ticket's **`nature`** (`backend` | `pdv-app` | `unknown`) — where the change lives. This is **signal only; it does not filter.** The size filter is the sole gate here. `nature` is carried forward so Phase 2 knows which repo family to clone (a `pdv-app` ticket lives in the POS client repo, not this backend), and so you can see the mix at the checkpoint. A small, well-scoped `pdv-app` fix is a valid candidate — it is not dropped for being a client-app change.
 
 ## Phase 2 — Pre-triage (enter the code, stop at 3)
 
-Walk the kept tickets **sequentially, smallest first**. For each, spawn **one** `balanced` subagent that — using the digest, **not** re-reading the map — investigates the real code paths the ticket touches, measures the **real** size, and writes a lean `spec.md` derived from the ticket (its description and acceptance criteria stand in for the human interview the SDD spec phase normally runs).
+Walk the kept tickets **sequentially, smallest first**. For each, spawn **one** `balanced` subagent that identifies the target repo, clones it, investigates the real code, measures the **real** size, and writes a lean `spec.md` derived from the ticket (its description and acceptance criteria stand in for the human interview the SDD spec phase normally runs).
 
-Each pre-triage subagent applies two safety filters and returns `viable: false` if either fails:
+**The target repo is often NOT the local working directory.** A ticket may belong to any repo the team owns (this backend, a sibling backend like customer-api/BFF/portal, or the `pdv-app` client). The subagent has full Bitbucket access, so it must **find and clone the right repo on demand** rather than assume the local one:
 
-- **Scope brake.** If the change would touch more than a handful of files, or investigation needs to open many files to even understand it, it is not small — reject it. This is also what guarantees no subagent ever fills its window: small-by-construction tickets are the only ones that survive.
+- **Discover the repo.** List the workspace repos via the Bitbucket MCP and match the ticket's `nature` + description to the most likely slug (`pdv-app`, `seru-customer-api`, …). If the local repo already is the target, use it.
+- **Clone on demand.** Clone the target repo into a temporary worktree/dir and investigate the real code there. Phase 3/4 work in that clone. **Never reject a ticket just because its code isn't in the local directory** — that's an access detail, not a size signal.
+
+Each pre-triage subagent then applies two safety filters and returns `viable: false` if either fails:
+
+- **Scope brake.** Size is measured by the *change*: if the fix would touch more than a handful of files, or understanding it needs opening many files, it is not small — reject it. This is measured against the cloned target repo, never against "is the code local?". This brake is also what guarantees no subagent ever fills its window: small-by-construction tickets are the only ones that survive.
 - **Multi-repo coupling.** Number of repos is *not* the measure of size — a one-line change across three repos is still small. The real risk is **coupling**: if the change is *isolated per repo* (the same edit applied independently, e.g. a shared constant or config), allow it up to a ceiling of **3 repos**. If the change crosses a *contract* between repos (an API change in one that a consumer in another must track), reject it to the human bucket regardless of line count — coordinating an interface across repos is exactly where an autonomous agent breaks runtime behavior no unit test catches.
 
 **Stop the instant 3 tickets are confirmed viable.** Do not pre-triage the rest; they wait for the next run.
