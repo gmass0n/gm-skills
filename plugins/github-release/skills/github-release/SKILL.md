@@ -167,7 +167,7 @@ These are safe (new refs only) — push without extra confirmation:
   - **Wait for the user to choose. Never force-push without confirmation.**
   - **After a rebase, the release branch and tag must move too** (push-gate steps 6–7): the tag `<X.Y.Z>` was pushed in Phase 8 onto the pre-rebase release HEAD; re-point it (`git tag -f`, force-push) to the rebased release HEAD. The existing **draft** release stays bound to tag `<X.Y.Z>` and will resolve to the new commit on publish (a draft does not pin a commit until published) — no need to recreate the draft; just confirm its notes still match.
 - **If clean:** report the green state.
-- **Always finish with a next-steps-to-production message** (see template in `templates.md`): branch/tag/PR/draft links, mergeability, and the ordered path: review draft → merge PR to prod → (decide tag placement) → publish release → deploy.
+- **Always finish with a next-steps-to-production message** (see template in `templates.md`): branch/tag/PR/draft links, mergeability, and the ordered path: review draft → merge PR to prod via `--merge` → publish release (tag stays on the release commit, no move) → deploy.
 
 ### Phase 10 — Finalize (FINALIZE mode only: publish draft + merge PR)
 Reached only from Phase 2's "ALL exist" route. This is the outward-facing "go live" step. **One gated confirmation** (Iron Rule #7).
@@ -177,12 +177,12 @@ Reached only from Phase 2's "ALL exist" route. This is the outward-facing "go li
    - Release: `gh release view <X.Y.Z> --json isDraft,tagName` — must be `isDraft: true`.
    - Tag: `git ls-remote --tags origin <X.Y.Z>` exists.
    - **If PR is not mergeable** (`dirty`/`CONFLICTING`) → STOP. This is the divergence case → route back to Phase 9's conflict handling (rebase/merge/cherry-pick options). Do NOT force-merge.
-2. **Detect merge method** — match prior releases: `gh pr view <prev-release-pr> --json mergedBy` won't reveal method reliably, so check the prod branch shape (`git log origin/<prod> --merges -1` → if the last release landed as a merge commit, use `--merge`; if linear, `--squash`; if the team rebases, `--rebase`). Default `--merge` (keeps the release commit + one merge commit, matching FCX history). Confirm with the user if ambiguous.
-3. **Detect tag placement** — where does the previous tag sit? `git branch -r --contains <prev-tag>`: if `<prev-tag>` is on the prod merge commit, the tag moves to the merge commit after merge; if it's on the release commit, it stays. Default: **stays on the release commit** (already pushed in Phase 8) — no tag move needed unless prior releases prove otherwise.
-4. **Show the finalize plan + get ONE confirmation** (see `templates.md` §6): "Merge PR #<num> into `<prod>` via `<method>`, then publish release `<X.Y.Z>`. Tag stays on `<release-sha>` / moves to merge commit. Proceed?" WAIT for explicit yes.
+2. **Merge method is ALWAYS `--merge` (merge commit).** Do NOT squash, do NOT rebase, and do NOT infer the method from prior release history — even if the last release landed as a squash or a linear commit, the release PR is merged with `--merge`. A merge commit keeps the release commit intact and makes the pushed tag an ancestor of prod without moving it. **Always confirm the method with the user in step 4 — never assume it silently, even when history looks unambiguous.** (The user may still choose a different method when asked; if they do, follow their choice for this run only — the standing default stays `--merge`.)
+3. **Tag placement — ALWAYS stays on the release commit.** The tag `<X.Y.Z>` was pushed onto the release-branch HEAD in Phase 8 and does NOT move. With `--merge` (step 2), the release commit becomes a parent of the prod merge commit, so the tag is automatically an ancestor of prod — no tag move, no force-push. (This is the confirmed FCX pattern: `2.3.0` on the release commit became an ancestor of prod after the `--merge` of PR #68.)
+4. **Show the finalize plan + get ONE confirmation** (see `templates.md` §6): "Merge PR #<num> into `<prod>` via **merge commit (`--merge`)**, then publish release `<X.Y.Z>`. Tag stays on `<release-sha>` (becomes an ancestor of prod via the merge — not moved). Proceed?" WAIT for explicit yes. Present `--merge` as the method; if the user asks for a different one, honor it for this run only.
 5. **Execute (order matters — merge first, then publish):**
-   - `gh pr merge <num> --<method>` (do NOT pass `--delete-branch` unless prior releases delete the release branch; check first).
-   - If tag must move (step 3): re-point `<X.Y.Z>` to the prod merge commit — `git fetch origin <prod>`, `git tag -f <X.Y.Z> origin/<prod>`, `git push origin -f refs/tags/<X.Y.Z>`. This is a **tag move on shared history** → it's a force-push (push gate step 7): back up the old tag ref first (`backup/tag-<X.Y.Z>-<YYYYMMDD-HHMM>`) and it's already covered by this confirmation.
+   - `gh pr merge <num> --merge` (do NOT pass `--delete-branch` unless prior releases delete the release branch; check first). Use `--merge` unless the user explicitly chose otherwise in step 4.
+   - Do NOT move the tag. It stays on the release commit and is already an ancestor of prod after the merge (step 3). Verify with `git merge-base --is-ancestor <X.Y.Z> origin/<prod>` after fetching prod.
    - `gh release edit <X.Y.Z> --draft=false` (publishes; the draft's notes/tag binding resolve now).
 6. **Verify + report:** PR `MERGED`, release `isDraft: false`, tag resolves to the intended commit. Finish with the go-live report (`templates.md` §7): merged PR link, published release link, and the deploy reminder (run migrations / configure infra if Migration notes apply).
 
@@ -196,11 +196,11 @@ Reached only from Phase 2's "ALL exist" route. This is the outward-facing "go li
 | 4 | create draft release | API | **auto** |
 | 5 | force-push rebased `dev` | force-with-lease | **STOP + backup + confirm** |
 | 6 | re-push rebased `release` | force-with-lease | **STOP + confirm** |
-| 7 | move tag to amended/merge commit | force | **STOP + confirm** |
-| 8 | merge release PR → prod (FINALIZE) | API | **STOP + confirm (Phase 10)** |
+| 7 | move tag to amended commit (rebase only) | force | **STOP + confirm** |
+| 8 | merge release PR → prod via `--merge` (FINALIZE) | API | **STOP + confirm (Phase 10)** |
 | 9 | publish draft release (FINALIZE) | API | **covered by step 8's confirm** |
 
-Steps 5–7 happen ONLY when dev diverged from prod. Steps 8–9 happen ONLY in FINALIZE mode (Phase 10); they share the single Phase 10 confirmation — merge first, then publish. Always create a backup ref before any rebase/force-push, named `backup/<branch>-pre-rebase-<YYYYMMDD-HHMM>` (date+time, e.g. `backup/develop-pre-rebase-20260619-2034`, so same-day retries don't collide). Never auto-rollback on failure — halt and report state + backup ref + recovery commands.
+Steps 5–7 happen ONLY when dev diverged from prod (Phase 9 rebase path); a normal FINALIZE never moves the tag because `--merge` keeps the release commit as a parent of prod. Steps 8–9 happen ONLY in FINALIZE mode (Phase 10); they share the single Phase 10 confirmation — merge first, then publish. Always create a backup ref before any rebase/force-push, named `backup/<branch>-pre-rebase-<YYYYMMDD-HHMM>` (date+time, e.g. `backup/develop-pre-rebase-20260619-2034`, so same-day retries don't collide). Never auto-rollback on failure — halt and report state + backup ref + recovery commands.
 
 ## Red Flags — STOP
 

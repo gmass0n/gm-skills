@@ -138,8 +138,8 @@ No body needed. No AI/co-author footer unless the repo's history shows one.
 1. Review the draft release notes: <releases-url>
 2. Review & approve the PR: <pr-url>
 3. <If conflicts: resolve via the chosen approach (rebase/merge/cherry-pick) — see options above.>
-4. Merge the PR into `<prod>`.
-5. Decide tag placement: keep on the release commit, or move to the prod merge commit (match prior releases — check where `<prev-tag>` sits).
+4. Merge the PR into `<prod>` via **merge commit (`--merge`)**.
+5. Tag stays on the release commit (the merge makes it an ancestor of prod — no tag move).
 6. Publish the draft GitHub release.
 7. Deploy `<prod>` (<run migrations / configure infra if Migration notes apply>).
 ```
@@ -155,8 +155,8 @@ Everything is prepared. This will make it live:
 
 | Action | Detail |
 |---|---|
-| Merge PR #<num> → `<prod>` | method: `<merge\|squash\|rebase>` (matches prior releases), mergeable: `<clean>` |
-| Tag `<X.Y.Z>` | <stays on release commit `<sha>` \| moves to prod merge commit> |
+| Merge PR #<num> → `<prod>` | method: `--merge` (merge commit — standing default; confirm), mergeable: `<clean>` |
+| Tag `<X.Y.Z>` | stays on release commit `<sha>` (becomes ancestor of prod via the merge — not moved) |
 | Publish release | draft <releases-url> → public |
 
 Order: **merge first, then publish.** Both are irreversible.
