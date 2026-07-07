@@ -25,6 +25,17 @@
         "installation": "AVAILABLE"
       },
       "category": "Productivity"
+    },
+    {
+      "name": "github-release",
+      "source": {
+        "source": "local",
+        "path": "./plugins/github-release"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Productivity"
     }
   ]
 }
