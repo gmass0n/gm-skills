@@ -44,7 +44,7 @@ Before each auth/verification scenario, read the mode the plan set:
 
 ## Step 5 — Verdict (the deliverable, in the plan's language)
 
-Write it to `docs/qa/<target>/verdict.md` and summarize inline:
+Write it to `docs/qa/<target>/verdict.md` from `templates/qa-verdict.template.md` — always the same structure — and summarize inline:
 
 - **Blockers** — what actually broke (expected vs observed, evidence, likely layer/repo — no fix).
 - **Warnings** — suspicious but not blocking (a WARN in a log, inconsistent data, a blocked scenario).
