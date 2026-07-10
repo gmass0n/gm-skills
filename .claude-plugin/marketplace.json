@@ -9,6 +9,11 @@
   },
   "plugins": [
     {
+      "name": "qa",
+      "source": "./plugins/qa",
+      "description": "Lightweight end-to-end QA workflow for mono- or multi-repo projects: plan and test skills that stand up a real local stack (isolated git worktrees, dynamically-free ports, dev-vs-mock data), smoke-check it, then run a per-phase scenario checklist — frontend via Playwright MCP (sequential, browser is a singleton), backend via curl (parallel-safe). qa:plan interviews you one question at a time and writes a self-contained docs/qa/<target>/plan.md; qa:test executes that plan and returns a verdict (blockers, warnings, summary) without ever fixing code."
+    },
+    {
       "name": "sdd",
       "source": "./plugins/sdd",
       "description": "Spec-Driven Development workflow: codebase mapping, spec, plan, implement, review and debug skills that prove every requirement is built and tested. Priority-tagged requirements, evidence-or-zero coverage, a P0 mutation/discrimination sensor, blind multi-lens local code review with adversarial verification, and a self-improving lessons memory. Brownfield-first."

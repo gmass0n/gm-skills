@@ -1,0 +1,21 @@
+{
+  "name": "qa",
+  "version": "0.1.0",
+  "description": "Lightweight end-to-end QA workflow for mono- or multi-repo projects: plan and test skills that stand up a real local stack (isolated git worktrees, dynamically-free ports, dev-vs-mock data), smoke-check it, then run a per-phase scenario checklist — frontend via Playwright MCP (sequential, browser is a singleton), backend via curl (parallel-safe). qa:plan interviews you one question at a time and writes a self-contained docs/qa/<target>/plan.md; qa:test executes that plan and returns a verdict (blockers, warnings, summary) without ever fixing code.",
+  "author": "Gabriel Masson",
+  "repository": "https://github.com/gmass0n/gm-skills",
+  "license": "MIT",
+  "keywords": [
+    "qa",
+    "end-to-end",
+    "test-plan",
+    "playwright",
+    "multi-repo"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "QA — Plan & Test",
+    "shortDescription": "Plan and run a real end-to-end QA of a local stack, then report a verdict — never fixes code.",
+    "category": "Productivity"
+  }
+}

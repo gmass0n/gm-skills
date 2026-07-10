@@ -5,6 +5,17 @@
   },
   "plugins": [
     {
+      "name": "qa",
+      "source": {
+        "source": "local",
+        "path": "./plugins/qa"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Productivity"
+    },
+    {
       "name": "sdd",
       "source": {
         "source": "local",
