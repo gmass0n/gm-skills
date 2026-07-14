@@ -1,7 +1,7 @@
 {
   "name": "triage",
   "description": "Automated Jira triage pipeline: pull tasks from the boards you name, filter by size in three discarding gates (description-only filter, in-code pre-triage, plan), open a draft WIP PR on Bitbucket with a plain-language summary per surviving task, pause for your approval, then deliver the approved ones through the SDD TDD loop and flip the draft to Ready. Reuses the sdd plugin's plan/implement methods; nothing runs to completion without your checkpoint.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": {
     "name": "Gabriel Masson"
   }

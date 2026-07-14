@@ -1,237 +1,30 @@
 ---
 name: implement
-description: "Execute an approved implementation plan task by task — Phase 3 (EXECUTE) of the SDD workflow, after sdd:plan. Use when the user says \"implement this\", \"build the plan\", \"run the tasks\", \"let's code X\", or names a task/batch like \"do T-3\". Works docs/specs/<feature>/plan.md as a pure orchestrator: one fresh subagent per REQ-bearing task, in a strict test-first TDD loop — write the failing test, watch it fail, make it pass, refactor, commit; then a fresh review subagent does a Post-Gate check (test count didn't regress, every REQ assertion at file:line). state.md is rewritten after every task for resume. A closing-gate subagent walks the coverage matrix, runs a P0 mutation sensor, and records failures as lessons in docs/codebase/lessons/; won't declare done while any requirement lacks a green, discriminating test."
+description: Execute an approved SDD implementation plan with proof per task.
+disable-model-invocation: true
 ---
 
-# SDD — Implement (Phase 3: Execute)
+# SDD — Implement
 
-## What this phase does
+Execute `docs/specs/<feature>/plan.md` task by task. The plan is the contract; implementation does not redesign it.
 
-Turn `docs/specs/<feature>/plan.md` into working, tested code — and **prove** it. This is the end of the proof chain: the spec said WHAT, the plan said HOW and built the coverage matrix, and this phase makes every requirement real and green. The user's strongest requirement governs everything here: *nothing is skipped, nothing is untested, and the flow proves it* — mechanically, not on trust.
+## Preconditions and scope
 
-You are the **orchestrator, and only the orchestrator**. You never write feature code, tests, run analysis, or review diffs in your own context — you dispatch a fresh subagent to implement each task, a fresh subagent to review it, read their verdicts, update `state.md`, and move on. Why: a subagent with a small, sharp brief is far less likely to drift or hallucinate than one big context accumulating every file it ever read. Isolation per task is the anti-hallucination mechanism.
+- Require a ready `spec.md`, executable `plan.md`, and current `docs/codebase/context.md`. Refuse a missing plan, `status: draft`, `[ANALYSIS]` marker, invalid selector, or missing multi-repo registry/Batch 0 worktree rather than inventing requirements, tasks, or topology.
+- Accept a feature, task, batch, or repository target. In multi-repo work, resolve the plan's REQ-to-repo registry and operate only in its Batch 0 worktree; never create cross-repo topology during execution.
+- Read and rewrite `docs/specs/<feature>/state.md` only after a task's atomic commit and green post-gate review. It is the resume cursor; derive completion and dependencies from its git SHA, not a claimed status.
 
-**Spawning a subagent is mandatory for every task that carries a REQ — and even a single-task plan gets its subagent.** "It's just one small edit, I'll do it myself" is the exact rationalization that turns the orchestrator into an implementer and reintroduces drift. One REQ-bearing task → one subagent. The **only** carve-out is the trivial ramp-down defined in "The task loop" (≤3 files, no REQ — a typo, rename, constant), which runs inline but stays under RED/GREEN + the closing gate; the instant a task shows >3 files or any AC, it goes to a subagent. If you ever find yourself reading feature source to decide *how* to implement, stop: that is the plan's job (Phase 2), already done, and doing it here means the plan was incomplete — fix the plan, don't analyze in implement.
+## Task loop
 
-**No codebase analysis in this phase.** The plan already did it — it carries the `Files`, the `Steps`, the snippets, the `Verification`. This phase only *executes* what the plan prescribes. If a task can't be executed without analysis, the plan is the bug; route it back to `sdd:plan`, don't paper over it here.
+1. Select only dependency-ready tasks in the requested scope. Run serially unless a plan-marked `[P]` batch proves files, requirements, repositories, and hot files independent; parallel work uses isolated task worktrees, sequential rebase/merge, integrated-suite verification, and cleanup.
+2. Commission one fresh executor per REQ-bearing task with only its `Steps`, `Files`, `Verification`, and testing convention. It touches only declared files; a missing requirement or needed analysis returns to `$sdd:plan` rather than expanding scope.
+3. For every `Verification` criterion: write a discriminating test, observe it fail for the required assertion (repair a setup failure or pre-green test), make the smallest contract-preserving change, observe green, refactor, and re-run. Commit the task atomically in English only after its declared checks and repository gates pass. For HTTP/service contracts, exercise the real running boundary when the required stack is available.
+4. Commission a fresh post-gate reviewer. It verifies test count, every mapped REQ assertion at `file:line`, and that each assertion proves the AC outcome; it records searches for absent assertions and rejects scope creep, undocumented `SPEC_DEVIATION`, or map-invariant violations. Do not update state or mark the task complete without its green verdict.
 
-This phase reads `plan.md` and the codebase map; it writes code, tests, commits, and the feature's `state.md`.
+Read [TDD discipline](references/tdd-discipline.md) when briefing an executor. Read [lessons](references/lessons.md) when loading confirmed lessons, recording a durable lesson, or resuming a prior failure.
 
-## Preconditions — refuse rather than guess
+## Closing gate
 
-- **No `plan.md`** → refuse: "There's no plan for `<feature>`. Run `sdd:plan <feature>` first." (phrase it in the inherited `lang:`).
-- **`plan.md` has open `[ANALYSIS]` markers or `status: draft`** → refuse and point back to `sdd:plan`. This is the safety net for a plan abandoned mid-`/analyze`; normally it never fires.
-- **Invoked with no plan at all** (user wants to just code) → don't silently comply. Say: "With no plan there's no coverage matrix — I can't prove everything was done and tested. Confirm you want vibe mode (no guarantee)?" Let the user choose the downgrade consciously rather than losing the guarantee silently.
-- **Repo selector on a plan with no registry** (`sdd:implement <feature> <repo>` but the plan has no repo registry / `Repo:` tags) → refuse: "`<feature>` is single-repo — there's no repo registry to filter. Run `sdd:implement <feature>` (or `T-n`/`L-n`)." Conversely, a multi-repo plan whose selected repo has **no `Batch 0` worktree yet** → stop and point back to `sdd:plan`/`Batch 0` instead of creating it here.
+After all requested tasks are green, commission a closing check: every REQ has an atomic committed task, named green test, and `file:line` assertion matching its AC; then run the integrated full suite, test-count/coverage checks, and repository gates. Any failed or missing proof remains open; never declare the plan complete. For each P0 REQ, run the proportional mutation sensor in an isolated scratch worktree only after `docs/codebase/conventions/testing.md` documents its exact scoped test command; otherwise record `sensor off`. Read [mutation-sensor.md](references/mutation-sensor.md) for the protocol. A surviving mutant is not green proof and is routed through the fix loop with a grounded lesson.
 
-**Inherit the language** from `plan.md`'s frontmatter (`lang:`) — for live narration and communication with the user only. The invariant: **files are always English** (including `state.md` — its content stays English regardless of `lang:`); **commit messages are always English** (the repo's git convention); only **talking to the human** (narration, status, questions) follows the plan's `lang:`.
-
-## Targeting — whole feature, one task, one batch, or one repo
-
-`sdd:implement <feature>` is the base; the optional **second argument** narrows the scope. There are **three modes**, and the parser distinguishes them by the shape of that second argument:
-
-- `sdd:implement <feature>` (no second arg) — work the whole plan, batch by batch.
-- `sdd:implement <feature> T-3` — second arg matches `T<n>` → just **task** T-3. **Verify its preconditions** (its `Depends on:` tasks are already committed) but do **not** silently re-run dependencies — if a dependency isn't done, say so and stop.
-- `sdd:implement <feature> L-2` — second arg matches `L<n>` → just **batch** L-2.
-- `sdd:implement <feature> <repo-tag-or-slug>` — second arg matches neither `T<n>` nor `L<n>` → treat it as a **repo selector** (multi-repo plans only; see below).
-
-**Parser order (deterministic):** `<feature>` is always required first. Then the second arg, if present, is classified: `^T\d` → task, `^L\d` → batch, otherwise → repo tag/slug. If the repo branch is reached but the token resolves to no repo in the spec's registry, **error clearly** — don't silently fall through to "whole feature". Example: `Repo "FOO" is not in the spec's repo registry. Available tags: LOC, CUS, BFF, POR.`
-
-Stable task/batch IDs come from the plan; that's why they exist.
-
-### The repo selector (multi-repo plans)
-
-When the plan carries a `## Cross-repo interface contract` block and tasks tagged `Repo:`, the feature spans several repositories in a chain (e.g. `operational-map`: locations-api → customer-api → BFF → portal). The model is **option 1 — the machine understands the repos, the human drives the terminals (one per repo).** This is *not* automatic orchestration of N pipelines: each `sdd:implement <feature> <repo>` invocation works exactly one repo — the one the selector names — inside that repo's own worktree, and the human runs one such invocation per terminal/repo.
-
-- **`<feature>` stays mandatory** before the repo token: the plan is needed to know the tasks *and* the repo registry (the selector only *filters* an existing plan, it never discovers repos).
-- **Resolution against the registry.** The spec emits a repo registry (a table: tag / slug / role / base branch). The selector accepts either the **short tag** (`LOC`, `CUS`, `BFF`, `POR`) **or** the **slug** (`locations-api`, `customer-api`, …); the slug must match the `repo (slug)` column of that table. Resolve tag↔slug both ways. Unknown token → the clear error above.
-- **Semantics — run all of that repo's tasks, in batch order.** Select every task whose `Repo:` equals the resolved repo, then run them **batch by batch (L-1 → L-2 → …)**, honoring each task's intra-repo `Depends on:`, and **stop at the first red test that won't pass** — same serial discipline as the whole-feature run, just filtered to one repo.
-- **Single-repo is unchanged.** A plan with no `Repo:` tags has no registry; the repo selector simply doesn't apply, and `sdd:implement <feature>` behaves exactly as before. The repo mode only "exists" when the plan is multi-repo.
-
-## Execution model — serial by default, parallel only when proven safe
-
-**Default: serial.** Work one task at a time, in dependency order, reviewing each before the next. This is simpler, gives fine-grained checkpoints, and matches the anti-bureaucracy spirit of the whole workflow. In this coupled brownfield, serial is almost always the right call.
-
-**Parallel is opt-in and must be earned.** Run a batch's tasks simultaneously only when the plan marked them `[P]` in the same `L-<n>` — which the plan only does when it proved their `Files` sets don't intersect and none touch the hot list (`*.module.ts`, `env.schema.ts`, domain contracts). If you're unsure whether that proof holds, fall back to serial. A wrong parallel call corrupts a merge; a serial run just takes longer. The asymmetry says: when in doubt, serial.
-
-When you do run a parallel batch, the mechanics matter (they're why most repos can't do this safely):
-- Each task runs in its **own git worktree** so writes don't collide.
-- **Symlink `node_modules`** from the repo root into each worktree — fresh worktrees have none, and the orphan worktrees already littering this repo prove nobody sets them up by hand.
-- Run each task's tests with coverage **scoped to that task's `Files`** (`--collectCoverageFrom`), not the global 80% threshold — that threshold only makes sense on the integrated branch.
-- **Merge sequentially with a rebase** before each merge; on any conflict, abandon parallel for the rest and finish serial.
-- After merging the batch, **run the full suite on the integrated branch** — a silent auto-merge of a shared module only surfaces here.
-- **Remove the worktree** when done. Cleanup is not optional; the litter proves it won't happen on its own.
-
-### Cross-repo worktrees (multi-repo plans) — reuse the same machinery, one worktree per repo
-
-The worktree+symlink+rebase+cleanup machinery above is **intra-repo** (one repo, parallel tasks). A multi-repo plan reuses the *same* primitives at a coarser grain — **one worktree per repo**, not per task — and that worktree is created up front by the plan's `Batch 0` (worktree + branch + PR per repo, off each repo's base branch from the registry), not by this phase. This phase **operates inside the worktree the registry/Batch 0 already established for the selected repo**; it does not invent new worktrees for cross-repo.
-
-What changes versus the intra-repo case, and only this:
-- **The repo worktree is keyed by the registry**, not by a task. Its path is the repo's worktree root recorded in the spec's registry / created in `Batch 0`. The repo selector (and a task's `Repo:` tag) resolves to that root.
-- **Every git, test, and commit for a task runs in that task's repo worktree** — operate on the worktree root explicitly (the `git -C <repo-worktree>` principle; don't hard-code a flag, the point is "act on *that* worktree, never the orchestrator's cwd"). Each invocation works the repo of its own terminal/context; it never reaches into a sibling repo's worktree.
-- **`node_modules` symlink, scoped coverage, and cleanup are per repo**, exactly as above — each repo worktree gets its own symlink from *its* repo root, its own coverage threshold from *its* `testing.md`, and its own teardown.
-- **No cross-repo merge here.** Intra-repo parallel batches still rebase-merge within a repo as above; across repos there is nothing to merge — each repo lands on its own branch/PR (the `## Cross-repo interface contract` block is what keeps the branches compatible). Cross-repo integration is proven by the closing gate's per-repo matrix, not by a merge.
-
-## The task loop — strict TDD, one subagent each
-
-For each task, dispatch one fresh subagent. Give it a **task briefing (~500 tokens)** — not the whole codebase map. The briefing is the task's own block from the plan verbatim: its `Steps` (with the embedded snippets), `Files`, and `Verification`, **plus `docs/codebase/conventions/testing.md`** so the tests it writes follow the project's enforced test contract (location, naming, the per-suite coverage checklist, commands, threshold). That set is self-contained and execution-ready — the plan pre-digested the *how*, testing.md fixes the *test shape*, so the executor needs no map and no analysis. The subagent's job is to *carry out the Steps in order*, not to figure out what to do. This keeps each subagent lean and on-target.
-
-**Trivial ramp-down — the one narrow exception to "a subagent per task".** A task that is **≤3 files and carries no REQ** (a typo fix, a rename, a constant bump — nothing with an acceptance criterion) may be executed **inline**, without spawning a per-task subagent, **still under RED/GREEN and still through the closing gate**. The point is to not pay subagent overhead for a one-line rename. **Hard guard (the safety valve):** before going inline, list the task's actual files — if that listing reveals **>3 files OR any REQ with an AC**, **STOP and formalize**: drop back to the full one-subagent-per-task flow. The exception relaxes nothing for medium/large work; it's the trivial leaf only, and the RED/GREEN + closing-gate protection is never waived.
-
-**Read the task's `Repo:` tag and run in that repo's worktree.** On a multi-repo plan, each task carries a `Repo:` tag; resolve it against the spec's registry to the repo's worktree root (established by `Batch 0`) and put that root in the briefing, so the subagent runs *its* Steps, tests, and commit against that worktree (`git -C <repo-worktree>`), pulling the convention from *that* repo's `testing.md`. A task with **no `Repo:` tag** (single-repo plan) runs in the cwd worktree exactly as today — the tag is the only difference. Each invocation handles the repo of its own context; the orchestrator never reaches into another repo's worktree to "also" run its tasks.
-
-Each subagent follows the plan's per-task `Steps`, which are already laid out as a strict **test-first TDD loop, no exceptions**:
-
-```
-loop over the task's Verification criteria:
-  RED      → write the test from the criterion. RUN IT. Watch it fail for the RIGHT reason
-             (an assertion about the missing behavior — not a syntax/import error).
-             If it passes before any code, the test is wrong — fix it until it fails.
-  GREEN    → write the minimal code to make it pass. RUN IT. Watch it pass.
-  REFACTOR → clean up with the test as a safety net. RUN the test again — still green.
-repeat until every Verification criterion of the task has a green test;
-COMMIT     → atomic commit for this task (the project's commit convention; in English).
-```
-
-The loop is the *proof that it works the best way*: the subagent never moves to the next criterion until the current one is green, and never commits until every criterion of the task is green. Each `RUN IT` is a real test execution — the subagent reports the actual pass/fail output, not "should pass". A criterion that can't be made to fail-then-pass is a flaw in the task or the spec — surface it, don't fake green.
-
-**Tests follow the project's testing convention.** The subagent's briefing includes `docs/codebase/conventions/testing.md` (file location, naming, the per-suite coverage checklist, the run commands, the coverage threshold). Tests are written *to that doc*, not to the subagent's own taste — it is the project's enforced test contract. If a task surfaces a real gap in that doc (a case it doesn't cover, a stale command), note it for `sdd:codebase diff` to fold back in — don't silently diverge.
-
-The non-negotiable: **no production code without a failing test first.** This is the fourth link in the proof chain — it guarantees every line of feature code exists to satisfy a test that maps to a requirement. The discipline that makes this stick (and the rationalizations that erode it) is in `references/tdd-discipline.md` — read it when a task tempts you to skip the red step or when a test is hard to write.
-
-### Post-Gate Review — a fresh subagent verifies, the orchestrator never analyzes
-
-After a task's commit, **dispatch a separate review subagent** (not the same one that wrote the code, and never the orchestrator in its own context — you only orchestrate, you don't read source to judge it). The reviewer gets the task's `Files`, `Verification`, the diff, and `testing.md`, and checks three things tlc-spec-driven proved cheap and high-value:
-
-1. **Test count didn't regress** — the suite has *at least* as many test cases as before the task. A drop means a test was silently deleted or skipped to force green. This is mechanical and catches the highest-impact cheat.
-2. **No undocumented spec deviation** — if the code diverged from what the plan's Steps prescribed, there must be a `// SPEC_DEVIATION:` marker explaining it (see below). Divergence without a marker → kick back to fix.
-3. **Not overcomplicated** — "would a senior engineer flag this as more complex than the task needs?" and "does it match the patterns in the codebase map?". If yes → the implementing subagent simplifies and re-runs the task's gate.
-4. **Evidence-or-zero** — for each REQ the task covers, the reviewer locates the **assertion expression** at a real `file:line` (the plan's matrix `Assertion` column is the anchor). "Probably covered" is not covered: a REQ with no locatable assertion is reported as **uncovered**, not assumed green. Before marking one absent, the reviewer records the search it ran (the `grep`/`glob`) — *"I searched and it's not there"* ≠ *"I didn't look"*.
-5. **Spec-anchored outcome** — the located assertion must match the **outcome the AC defines**, not merely exist. A test that asserts the wrong thing (or a tautology) doesn't cover the REQ. When the AC itself is too vague to anchor against, the reviewer flags `⚠️ spec-precision gap` in its verdict (it does not pass silently) — that's a signal to tighten the spec, not to wave the task through.
-
-Only when the reviewer returns clean does the task count as done and `state.md` advance. The review is a subagent precisely so the orchestrator stays lean and unbiased — a reviewer with fresh eyes catches what the author rationalized.
-
-**`// SPEC_DEVIATION:` marker.** When a task's implementation must diverge from the plan's Steps (a signature the plan didn't foresee, a different data structure for a real constraint), the implementing subagent leaves an inline marker at the divergence:
-
-```
-// SPEC_DEVIATION: used a Map instead of the array the plan foresaw
-// Reason: O(1) lookup required by the real upstream volume
-```
-
-It's the implement-phase twin of the spec's `[NEEDS CLARIFICATION]` and the plan's `[ANALYSIS]` — a durable, greppable record that code and plan disagreed *and why*. The closing gate collects every `SPEC_DEVIATION` and surfaces them in the final report, so a divergence is a conscious, reviewed decision, never a silent drift.
-
-**Review after each task (serial path) — via the Post-Gate Review subagent above, not in your own context.** Before moving to the next task, the review subagent checks: tests green, the task's `Verification` actually satisfied, test count didn't regress, no scope creep beyond the task's `Files`, `SPEC_DEVIATION` markers present for any divergence, follows the patterns in the codebase map. You (orchestrator) read its verdict and decide go/fix — you don't read the diff yourself. On a parallel batch, review per-batch instead (after the integrated-branch suite passes) — that's the one place granularity yields to throughput.
-
-Task status **derives from git** — an atomic commit per task is the record of what's done. Don't maintain a parallel "done list"; the commit log is the truth.
-
-## state.md — the cursor, updated after every task
-
-Maintain `docs/specs/<feature>/state.md` (lowercase) so work survives across sessions. **Only `sdd:implement` writes it.** Keep it bounded and **rewrite it compact each update — never append** — so it stays ~300-400 tokens and costs almost nothing to load:
-
-```markdown
----
-title: state — <feature>
-lang: pt | en          # conversation language; file content stays English
-feature: <feature>
-branch: <branch>
-generated: <date>
----
-# state — <feature>
-branch: feature/CL-28-notifications
-last: T-3 (commit a1b2c3d)
-next: T-4
-open: —                             # pending decisions/blockers
-coverage: REQ-1 ✅  REQ-2 ✅  REQ-3 ⏳
-```
-
-**Multi-repo: track progress per repo/tag.** When the plan is multi-repo, `state.md` records a line per repo (keyed by tag), each with its own branch and last/next cursor — no new persistence machinery, just one more dimension on the same compact cursor. The repo selector and a dead-session resume read the row for the repo they're working:
-
-```markdown
-# state — operational-map
-LOC (locations-api): branch feature/CL-31-loc | last T-2 (a1b2c3d) | next T-3
-CUS (customer-api):  branch feature/CL-31-cus | last T-5 (e4f5g6h) | next —      ✅ repo green
-BFF (seru-delivery): branch feature/CL-31-bff | last —             | next T-7
-POR (portal):        branch feature/CL-31-por | last —             | next T-9
-open: —
-coverage: REQ-1 ✅  REQ-2 ✅  REQ-3 ⏳ (BFF)
-```
-
-**Rewrite it the instant a task finishes — after the task's commit, before dispatching the next subagent.** This is non-negotiable: `state.md` must always reflect the *real* committed state, so if the session dies mid-plan, the next run reads `last`/`next` (for the relevant repo row, when multi-repo) and resumes from the exact task that was in flight — no re-doing committed work, no skipping an unstarted one. A `state.md` updated only at the end is useless for the one case it exists for.
-
-It's a cursor, not a journal: where am I, what's next, which requirements are green. The `coverage:` line mirrors the plan's matrix and feeds the closing gate. Detailed history lives in git, not here. On a parallel batch, only you (the orchestrator) touch `state.md` — subagents never write it, or they'd race.
-
-## The closing gate — the proof
-
-This is the payoff of the whole workflow. When the tasks are done, **dispatch a closing-gate subagent to walk the plan's coverage matrix and prove completion** — the orchestrator commissions the proof and reads the verdict; it doesn't run the checks in its own context. Don't declare done on vibes:
-
-```
-for each REQ in the plan's matrix:
-    ├─ its task(s) committed?           (check git — in the task's repo worktree when multi-repo)
-    ├─ its named test exists and is GREEN?   (run it in that repo's worktree)
-    ├─ evidence-or-zero: its assertion (matrix `Assertion` col) is locatable at a real file:line?
-    │     (record the grep/glob run; "searched, not found" ≠ "didn't look" — no locatable assertion = UNCOVERED)
-    ├─ spec-anchored: that assertion matches the AC's outcome, not just exists?
-    │     (assertion present but not matching the outcome, or AC too vague to anchor → ⚠️ spec-precision gap in the report)
-    └─ ✅ only if all hold
-
-then on the integrated branch (per repo when multi-repo — each in its own worktree):
-    ├─ full suite passes
-    ├─ test count did NOT regress vs base — no test silently deleted or skipped to go green
-    ├─ coverage of the new slice didn't regress (threshold from that repo's testing.md)
-    ├─ lint/typecheck/hooks pass (the project's enforced invariants)
-    └─ collect every // SPEC_DEVIATION marker in the slice → list them in the report
-
-# multi-repo only: feature is done ⟺ every repo in the registry passes the above;
-# a single-repo target reports just its own repo green, others may stay open.
-```
-
-If any REQ lacks a committed task with a passing test, **do not declare done.** Report exactly which requirements are still open and what's missing. This is the difference from a static coverage check: here every requirement is proven by a *passing test on the real branch*, not just a row in a table.
-
-**Discrimination sensor — after the matrix is green, prove the P0 tests actually discriminate.** A green test can be green for the wrong reason. So once the matrix is fully green, for **each `Priority: P0` REQ** the closing-gate subagent injects **one** mutant proportional to the risk (a boolean flip, an off-by-one, a wrong return) in an **isolated `git worktree` scratch** (never `git stash`), runs **only that REQ's named test scoped** (the same scoped run the gate already uses — one test, not the suite), and confirms the test **kills** the mutant; then it discards the scratch (`worktree remove --force`, mandatory even on error). A **surviving mutant = a weak test** → a fix task in the same fix loop, plus a `surviving_mutant` lesson. The sensor runs P0-only (priority is the budget) and **disables itself in any repo whose `testing.md` doesn't document a scoped run by test name**, narrating *"sensor off"* rather than running the suite N times. The full mechanics — catalog, the worktree scratch with mandatory cleanup, the per-repo precondition check — are in `references/mutation-sensor.md`. Before running, the gate narrates the cost: *"sensor: N P0 REQs, N scoped tests"*.
-
-**Multi-repo: "done" is repo-relative when a repo was the target; global done needs every repo green.** When the run was `sdd:implement <feature> <repo>`, the closing gate proves *that repo's* slice of the matrix (its tasks committed, its tests green on its branch in its worktree) and reports the repo as done — the other repos may still be open, and that's expected (one terminal per repo). The **feature** is done only when every repo in the registry is green: the closing gate walks the matrix **per repo**, each row resolved in its own worktree (`git -C <repo-worktree>`, tests via *that* repo's `testing.md`), and won't declare the feature complete while any repo's slice has an open REQ. Cross-repo interface compatibility is checked against the plan's `## Cross-repo interface contract` block — a repo green in isolation but diverging from the contract is reported as a blocker, not a pass.
-
-**Record lessons from real failures (the self-improving memory).** As the gate walks its exit points, distill each *real failure* into a one-line, grounded lesson via `scripts/lessons.js add` — in the **order the gate reaches the signal**, not batched at the end (a dead session must not lose signals already produced): a non-green/unanchored REQ → `ac_gap`; a surviving mutant (sensor) → `surviving_mutant`; a vague AC / mismatched assertion (item B) → `spec_precision_gap`; a build/lint/typecheck failure → `gate_fail`; each collected `// SPEC_DEVIATION` → `spec_deviation`. Every `add` **requires `--source`** (a `file:line`/`grep:`/`gate:` grounding) — the script refuses without it: *a lesson with no grounding is an opinion, not a lesson*. A clean PASS writes nothing. Lessons land in the project's versioned `docs/codebase/lessons/`, never in `state.md`. Capture project-local execution mistakes only — never opinions about the SDD process itself. The exact sequence, signal map, and `--scope` rules are in `references/lessons.md`.
-
-The **test-count check** is mechanical and cheap: it catches the one cheat a green suite hides — a test removed or `.skip`-ed so the bar is lower than it was. The gate compares the slice's test count against the base branch; a drop with no committed task that legitimately removed a test is a failure, not a pass. Coverage threshold and run commands come from `testing.md`, never invented.
-
-When the gate is fully green, update `state.md` (`next: —`, all REQs ✅) and report: which tasks landed, the matrix all-green, suite + coverage status, test-count delta, the sensor line (`N P0 REQs sensed, N mutants killed` — or `sensor off` per repo when `testing.md` lacks a scoped run), any `SPEC_DEVIATION` markers (each a conscious, reviewed divergence), and any `⚠️ spec-precision gap` raised (a REQ whose AC was too vague to anchor an assertion against — surfaced, never silent). That report is the proof the user asked for.
-
-## What this skill must not do
-
-- **No production code without a failing test first.** The red step is the guarantee, not a formality.
-- **No declaring done with an uncovered REQ.** The closing gate exists precisely to prevent "looks finished but isn't".
-- **No REQ marked covered without a locatable assertion.** Evidence-or-zero: a REQ whose assertion can't be found at a real `file:line` is uncovered, not "probably ok". An assertion that doesn't match the AC's outcome is a `⚠️ spec-precision gap`, surfaced in the report — never waved through.
-- **No mutating the real working tree in the sensor.** The discrimination sensor runs in an isolated `git worktree` scratch with mandatory cleanup — never `git stash`, never the live tree. A surviving mutant is a fix task, not a warning. See `references/mutation-sensor.md`.
-- **No parallel without the plan's proof.** Unsure → serial. A corrupted merge costs more than the time saved.
-- **No fat subagent context.** Briefing per task, not the whole map. Lean context is what keeps the executor from drifting.
-- **No scope creep.** A task touches only its `Files`. New work discovered mid-task → note it, finish the task, raise it — don't silently expand.
-- **No implementing in your own context.** Every task, even the only task, goes to a fresh subagent — **except the trivial ramp-down (≤3 files, no REQ) defined in "The task loop"**, which is still protected by RED/GREEN + the closing gate. Anything with an AC, or >3 files, goes to a fresh subagent. The orchestrator orchestrates; it never codes a real feature task.
-- **No reviewing or gating in your own context.** Post-Gate Review and the closing gate run in fresh subagents too. You commission the check and read the verdict — you never read source to judge it yourself.
-- **No codebase analysis.** Analysis was Phase 2. If a task needs it, the plan is incomplete — fix the plan, don't analyze here.
-- **No silent test deletion.** Test count must not regress to go green. A dropped/skipped test without a task that legitimately removed it fails the gate.
-- **No undocumented divergence.** Code that departs from the plan's Steps carries a `// SPEC_DEVIATION:` marker with a reason. Drift without a marker is a review failure.
-- **No state.md as a journal.** Cursor only, lowercase filename, rewritten compact after every task; git holds the history.
-- **No lessons without grounding, and none in state.md.** A recorded lesson always carries `--source`; the gate writes lessons to `docs/codebase/lessons/` (via `scripts/lessons.js`), never into `state.md`, and only from real failures — a clean PASS records nothing. See `references/lessons.md`.
-
-## Common mistakes
-
-| Mistake | Fix |
-|---|---|
-| Writing the code, then a test for it | Test first, watch it fail. A test written after passes trivially and proves nothing. See `references/tdd-discipline.md`. |
-| Declaring the feature done because "it works" | Walk the matrix. Every REQ needs a committed task and a green test on the integrated branch. |
-| Running tasks in parallel to be fast | Only if the plan marked them `[P]` in a batch (proven file-isolated). Otherwise serial — a bad merge costs more. |
-| Pasting the whole context.md into each subagent | ~500-token briefing from the plan's `Files`/`Verification`. The map was the plan's input, not the executor's. |
-| One giant commit at the end | Atomic commit per task — that's how status derives from git and how rollback stays cheap. |
-| "It's one tiny task, I'll just do it myself" | Spawn a subagent — unless it's the trivial ramp-down (≤3 files, no REQ): that one may run inline, still under RED/GREEN + closing gate. List the files first; >3 files or any REQ → STOP and formalize to a subagent. |
-| Reviewing the diff yourself to save a subagent | Post-Gate Review and the closing gate are subagents. You read verdicts, not source. Fresh eyes catch what the author rationalized. |
-| Reading source to decide how to implement | That's analysis — it belonged to Phase 2. The plan's Steps already say how. Missing? Fix the plan. |
-| Suite green, so it's fine | Check the test count didn't drop — a `.skip` or a deleted case turns red green. The gate asserts count vs base. |
-| Code diverged from the plan, no note | Leave a `// SPEC_DEVIATION:` marker with the reason. The closing gate collects them; silent drift is a review failure. |
-| Writing tests to your own taste | Tests follow `docs/codebase/conventions/testing.md` — location, naming, coverage checklist, commands, threshold. It's the project's test contract. |
-| Updating state.md only at the end | Rewrite it after every task's commit. It exists for the dead-session case; stale = useless. |
-| state.md growing every session | Rewrite it compact each time. It's a cursor (branch, last/next, coverage), not a log. |
-| Re-running dependencies when targeting a single task | Verify the dependency is committed; if not, stop and say so. Don't silently rebuild it. |
-| Running a task in the orchestrator's cwd on a multi-repo plan | Resolve the task's `Repo:` tag to its worktree (from the registry / `Batch 0`) and run there (`git -C <repo-worktree>`). The cwd is only right for untagged single-repo tasks. |
-| Treating the repo selector as "build all 4 repos for me" | One `sdd:implement <feature> <repo>` works one repo, in its terminal. Option 1: the machine knows the repos, the human drives one terminal per repo. Not auto-orchestration of N pipelines. |
-| Declaring the feature done after one repo goes green | Repo-target done is repo-relative. Feature done needs every repo in the registry green, each proven in its own worktree, and matching the interface contract. |
+Report completed and remaining tasks, worktree/repository status, and proof paths. If the plan is fully satisfied, tell the user to invoke `$sdd:review` manually before publishing. Do not auto-invoke another skill, edit unplanned scope, or publish changes.

@@ -38,3 +38,11 @@ grill for completeness's sake.
 
 Recommended answer first, the alternative as an easy correction. Keep it short. If the user
 gives a terse "yes" / "isso" / "correto", take it and move on.
+
+## Sensitive details
+
+Treat the report as audience-neutral unless the user explicitly scopes an authorized internal
+audience. Do not ask the user to paste secrets, credentials, tokens, PII, raw logs, payloads, or
+internal identifiers. If a supplied detail is potentially sensitive and a safe summary would lose
+material meaning, ask one question: whether to redact it, provide approved wording, or change the
+audience. Never infer authorization from the source material alone.

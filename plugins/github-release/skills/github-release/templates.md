@@ -158,6 +158,7 @@ Everything is prepared. This will make it live:
 | Merge PR #<num> → `<prod>` | method: `--merge` (merge commit — standing default; confirm), mergeable: `<clean>` |
 | Tag `<X.Y.Z>` | stays on release commit `<sha>` (becomes ancestor of prod via the merge — not moved) |
 | Publish release | draft <releases-url> → public |
+| Preflight | draft `tagName`: `<X.Y.Z>`; release branch HEAD = tag SHA = `<sha>` |
 
 Order: **merge first, then publish.** Both are irreversible.
 Proceed? (yes / no)

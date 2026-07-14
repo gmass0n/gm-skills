@@ -1,0 +1,15 @@
+{
+  "name": "triage",
+  "version": "0.2.0",
+  "description": "Jira triage with explicit approval checkpoints.",
+  "author": "Gabriel Masson",
+  "repository": "https://github.com/gmass0n/gm-skills",
+  "license": "MIT",
+  "keywords": ["jira", "triage", "bitbucket"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Triage",
+    "shortDescription": "Triage Jira work with explicit approval checkpoints.",
+    "category": "Productivity"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "gm-skills",
+  "description": "Manual router for the gm-skills plugin commands.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Gabriel Masson"
+  }
+}

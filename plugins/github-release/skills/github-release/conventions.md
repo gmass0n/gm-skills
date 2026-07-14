@@ -76,5 +76,5 @@ When the repo has never released, detection has nothing to read. Use these defau
 
 - `git fetch --tags` may print `! [rejected] <tag> (would clobber existing tag)` — harmless, the branch still fetches.
 - Local refs can be stale — verify `origin/<dev>` and `origin/<prod>` HEADs via the GitHub API before computing the delta.
-- A draft release's `tag_name` may show `untagged-<hash>` via the API until the release is published — expected; it binds to the real tag on publish.
+- A draft release may expose `untagged-<hash>` before its tag is bound. It is not eligible for FINALIZE: stop until its `tagName` is exactly the candidate tag.
 - If the tag already exists when publishing a draft, GitHub uses the existing tag and ignores `target_commitish`.

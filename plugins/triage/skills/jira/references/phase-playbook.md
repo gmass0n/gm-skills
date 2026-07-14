@@ -41,6 +41,14 @@ Every briefing you send, in every phase, includes these four lines so a weaker m
 
 Reinforce in every briefing: **you may not spawn another subagent.** If the work needs sub-units, that is a signal to return `viable: false`, not to fan out.
 
+## Remote-write preflight
+
+Before **each** Bitbucket write for a ticket (branch creation, push, PR create/update/comment, or draft publication), the responsible agent must fetch live evidence and record it in its verdict/log:
+
+`{ workspace, repo_slug, remote_head, base_branch, source_branch, pr_destination, evidence }`.
+
+`workspace` and `repo_slug` come from the Bitbucket repository object; `remote_head` and `base_branch` come from the current remote branch state/branching model; `pr_destination` names the exact workspace/repo/base branch. Confirm the local checkout remote, when used, matches that workspace/repository. If more than one repository is plausible, a workspace cannot be established, a base/source ref is absent, or any of those facts conflict, stop that ticket as `blocked: repository-or-destination-unconfirmed`. Do not create a branch, push, or open/update/publish/comment on a PR first and reconcile later.
+
 ## Phase 0 — Briefing
 
 **Tier:** `fast`. **One subagent.**
@@ -53,13 +61,15 @@ Hold the returned digest in the orchestrator. Inject it verbatim into Phases 2�
 
 **Tier:** `fast`. **One subagent for ALL tickets.**
 
-First, you (orchestrator) fetch the tickets via the Jira MCP. Build the JQL from the boards and the status (default `Priorizado`):
+First, normalize input before fetching tickets. Split `boards` on commas, trim and uppercase each key, reject an empty/duplicate key or any key not matching `[A-Z][A-Z0-9_]*`. Trim `status`, reject empty/control characters, and encode a JQL string literal by escaping `\\` before `"`. Prefer a Jira MCP list/search operation with separate project and status filter fields; do not build JQL if that operation is available. Only when JQL is the available API, use the normalized keys and escaped status to build:
 
 ```
 project in (<boards>) AND status = "<status>" ORDER BY created ASC
 ```
 
-e.g. for `/triage:jira SUS` → `project = SUS AND status = "Priorizado" ORDER BY created ASC`. If `status` contains spaces or accents, keep it quoted. Pass the **list of `{key, title, description, labels, components}`** to the single subagent.
+e.g. for `$triage:jira SUS` → `project = SUS AND status = "Priorizado" ORDER BY created ASC`. If `status` contains spaces or accents, keep it quoted. Pass the **list of `{key, title, description, labels, components}`** to the single subagent.
+
+Keep the resulting `{query_or_filter, tickets:[{key,title}]}` as the selection record. Immediately before Phase 3, display it verbatim and confirm every viable ticket is in that exact list; a ticket absent from the record cannot receive a PR.
 
 Briefing: "Classify each ticket **from its text alone**. Do NOT read any code. For each return `{key, size, nature, ambiguous, reason}`:
 - `size ∈ {PP,P,M,G}` (PP=trivial/1-line, P=small, M=medium/one module, G=large/multi-area).
@@ -89,7 +99,7 @@ Apply two brakes and return `viable:false` if either trips:
 
 If viable, write a lean `docs/specs/<KEY>/spec.md` in the target repo from the ticket (description + acceptance criteria as the requirements; English). Return the verdict."
 
-Verdict: `{ key, viable, real_size, repo_slug, repo_path, stack, repos, reason, spec_path }` (`stack ∈ {node, android, other}`)
+Verdict: `{ key, viable, real_size, workspace, repo_slug, repo_path, repository_evidence, stack, repos, reason, spec_path }` (`stack ∈ {node, android, other}`). `repository_evidence` identifies the selected Bitbucket repository and why competing candidates were excluded. If it is insufficient, return `viable:false` with `reason: repository-unconfirmed`.
 
 **The instant 3 tickets return `viable:true`, stop spawning.** Remaining kept tickets wait for the next run.
 
@@ -102,14 +112,14 @@ Per viable ticket, briefing:
 "Read the plan method at `$SDD/plan/SKILL.md` and follow it to produce `docs/specs/<KEY>/plan.md` from `<spec_path>`. Execute the method yourself — do NOT invoke any skill, do NOT spawn subagents. English body. Anchor every decision to the digest below. If you cannot close the plan without an open `[NEEDS CLARIFICATION]`, finish anyway and set `needs_clarification:true`.
 
 Then, via the Bitbucket MCP:
-- **fetch the target repo's branching model** (`getRepositoryBranchingModel`) and read its development branch + branch prefixes — do NOT assume `develop`/`type/`,
+- complete the **remote-write preflight** above against the live repository and record its evidence before the first write. Fetch the target repo's branching model (`getRepositoryBranchingModel`) and read its development branch + branch prefixes — do NOT assume `develop`/`type/`. Re-check the source/base/PR destination immediately before every later Bitbucket write,
 - create branch `<repo-prefix>/<KEY>-short-desc` off that development branch (e.g. `fix/<KEY>-...` off `development` for pos-facil-api),
 - commit the `docs/specs/<KEY>/` artifacts,
 - open a **draft** PR (base = that development branch) titled `[TYPE] #<KEY> - Description` with a **Portuguese** description: 2-4 plain sentences on what the ticket is and how it will be implemented, a note that this PR currently carries only the spec/plan (the fix comes after approval — Phase 4 will refresh this text), plus a `needs manual follow-up` note if applicable.
 
 Return the verdict only."
 
-Verdict: `{ key, pr_url, size, summary_ptbr, needs_clarification }`
+Verdict: `{ key, pr_url, size, summary_ptbr, needs_clarification, remote_target }`, where `remote_target` is the recorded remote-write preflight object.
 
 ## Phase 4 — Deliver
 
@@ -126,6 +136,8 @@ Code discipline (ponytail): fix the **root cause** — grep the callers of any f
 Work on the ticket's existing branch (created in Phase 3). Use the digest below; do not re-read the map.
 
 **Update the PR description after delivering.** The Phase 3 description was written when only the spec/plan existed and says the fix is *not yet implemented*. Once you've committed the fix + tests, update the PR description (Bitbucket MCP `updatePullRequest`) so it reflects what was actually done: what changed, the tests added and their result, gate status. A Ready PR whose description still says 'not implemented' misleads the human reviewer. Keep it Portuguese.
+
+Before pushing commits or updating the PR description, repeat the remote-write preflight and stop on any destination drift.
 
 Return the verdict."
 
@@ -148,6 +160,8 @@ Orchestrator collects findings across lenses. If any `blocker|warning|nit` survi
 1. Spawn **one** `balanced` fix subagent: "Resolve these findings (ponytail discipline), commit. Findings: <list>. Return `{ resolved, commits }`."
 2. **Re-review:** spawn a **fresh** full set of lens subagents (new attempt = new context).
 3. **Cap: 2 review→fix cycles.** Clean → publish the draft as Ready via the Bitbucket MCP (`publishDraftPullRequest` / convert from draft). Still failing → leave draft, post the open findings as a PR comment, flag to the human.
+
+Before a fix push, Ready publication, or PR comment, repeat the remote-write preflight. A failed or conflicting preflight leaves the PR unchanged and returns `blocked: repository-or-destination-unconfirmed`.
 
 Final verdict: `{ key, verdict, ready, open_findings }`
 

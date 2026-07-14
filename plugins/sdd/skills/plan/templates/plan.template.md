@@ -73,7 +73,12 @@ generated: <date>
  NOT decided here. `sdd:implement`'s closing-gate mutation sensor runs only on P0 tasks. Omit only if every
  Source REQ is untagged (defaults to P1).
  The Steps below them are the execution SCRIPT: the implement subagent only follows them, it doesn't decide.
- Each task starts with a failing test and ends in an atomic commit — TDD, no exception.
+ Feature tasks start with a failing test and end in an atomic commit — TDD, no exception. `T-0-<repo>`
+ setup tasks validate their repository preconditions instead.
+
+ For multi-repo, list `T-0-<repo>` as normal tasks before feature tasks: `Repo:`, `Depends on: —`,
+ declared scaffold `Files`, `Verification` that proves clone/base/worktree/branch, and checkbox Steps.
+ Every L-1 task lists all T-0 tasks in `Depends on:`.
 
  Steps rule: ALWAYS checkbox + file + verification command. Embedded code snippet
  ONLY when the edit is non-obvious (a new signature, a conditional spread, a SQL). A trivial edit
@@ -120,15 +125,16 @@ generated: <date>
 <pre-computed from the dependency graph + the two axes (file collision intra-repo +
  contract barrier cross-repo). The implement uses them, doesn't recompute.
 
- MULTI-REPO opens with L-0: 1 task/repo from the `## Repos involved` registry — clone if absent →
- worktree + branch off the repo's base (bases differ: some master, some develop) → commit the specs
- scaffold → push → DRAFT PR. Base and title come from the registry; the PR tool is the executor's detail.
+ MULTI-REPO opens with one executable `T-0-<repo>` per `## Repos involved` registry entry — validate clone,
+ base, worktree, and branch; then commit the specs scaffold → push → DRAFT PR. Each T-0 has Steps and
+ Verification, and every L-1 task depends on all T-0 tasks. Base and title come from the registry; the PR tool
+ is the executor's detail.
  Single-repo has NO L-0.
 
  Cross-repo: tasks in different repos are [P] to IMPLEMENT if the contract is frozen
  (each one mocks against the shape), BUT the consumer has `Depends on:` the producer for MERGE order.
  Parallel to implement ≠ ordered to merge.>
-- **L-0** (multi-repo scaffold): T-0-LOC, T-0-BFF — clone/worktree/branch/push/draft PR per repo
+- **L-0** (multi-repo scaffold): T-0-LOC, T-0-BFF — executable setup tasks; each validates clone/base/worktree/branch
 - **L-1** (serial): T-1
 - **L-2** (solo, [!]): T-2 — critical, runs and validates alone
 - **L-3** (parallel): T-4, T-5 — Files with no intersection, none on the hot list
@@ -151,9 +157,10 @@ generated: <date>
 
 ## Concern remediation (optional, opt-in)
 
-<only concerns whose anchor falls in the feature's Files, and that the dev ACCEPTED to include.
- Empty if none was accepted. Global debt does NOT go here.>
-- T-6 — Source: CONCERN-007 — handles the upstream stream timeout (src/.../adapter.ts:42)
+<only concerns whose anchor falls in a declared task's `Files`, and that the user ACCEPTED to include.
+ Each entry references that task, or is a complete task with normal metadata/Steps/Verification. Record the user
+ decision as `Accepted by: <decision ID or date>`. Empty if none was accepted. Global debt does NOT go here.>
+- Task: T-2 — Source: CONCERN-007 — handles the upstream stream timeout (`src/modules/notification/infrastructure/seru/seru-notification.adapter.ts:42`). Accepted by: D-7.
 
 ## Pending analysis
 
@@ -174,8 +181,8 @@ generated: <date>
 - **`Priority:` is inherited, not decided.** The task's priority is the highest among its Source REQs (P0 wins over P1 over P2), carried up from the spec's US/REQ tags. It exists for one downstream consumer: `sdd:implement`'s mutation sensor runs only on P0 tasks. Don't invent a priority the spec didn't set; untagged REQs default to P1.
 - **The matrix `Assertion` column is the evidence anchor.** Each REQ row names the literal assertion expression that proves its outcome — what the closing gate locates `file:line` and matches against the AC. A row with no assertion is an uncovered REQ to the gate; an assertion that doesn't match the AC's outcome is a spec-precision gap. Use "(filled at implement)" only when the exact expression genuinely can't be known yet.
 - **Cross-repo contract is mandatory multi-repo.** The `## Cross-repo interface contract` block freezes name+type of each field that crosses the chain. Omitted entirely single-repo.
-- **`L-0` opens every multi-repo feature.** 1 task/repo from the registry: clone if absent → worktree+branch off the repo's base → commit scaffold → push → draft PR. Deterministic (base/title from the registry). Single-repo doesn't have one.
+- **`L-0` opens every multi-repo feature.** One executable `T-0-<repo>` per registry repo validates clone/base/worktree/branch and has normal Steps/Verification; all L-1 tasks depend on it. Then it commits scaffold → pushes → opens a draft PR. Deterministic (base/title from the registry). Single-repo doesn't have one.
 - **Complete matrix is a gate.** Every REQ from the spec → a row in the matrix with a task + test. Missing one → plan FAILS, lists the gap, stops.
 - **`/analyze` blocking loop.** Checks: phantom REQ, uncovered REQ, contradiction with an enforced invariant, and (multi-repo) **cross-repo contract consistency** — the field in the `## Cross-repo interface contract` appears with the SAME name+type in the task that PRODUCES it and the one that CONSUMES it. Inconsistency found → `[ANALYSIS: ...]` persisted in "Pending analysis" immediately. `status: ready` only with that section empty. `sdd:implement` reads the status and the section — a `draft` plan or one with an open `[ANALYSIS]` is refused.
-- **Concerns only by scope and opt-in.** Filters by anchor in the feature's `Files`, presents to the dev, only enters if accepted. Never auto-injects, never pulls global debt.
+- **Concerns only by scope and opt-in.** Each entry references a declared task (or is a full task), with its `file:line` anchor in that task's `Files` and `Accepted by: <decision ID or date>`. Never auto-injects or pulls global debt.
 - **Each Design decision → REQ-id.** An orphan decision (no REQ) is scope creep.

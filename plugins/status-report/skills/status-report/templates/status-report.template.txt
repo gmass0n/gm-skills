@@ -5,6 +5,9 @@
 # Keep full accentuation. Status emoji: ✅ Resolved | 🔧 In progress | ⛔ Blocked.
 # Drop any metadata line that does not apply. Keep section headers only when they have content.
 # Remove every comment line (starting with #) from the final file.
+# Audience-neutral: never render secrets, credentials, tokens, PII, internal IDs, raw logs,
+# stack traces, payloads, hostnames, repo paths, or exploit-enabling details. Summarize safely;
+# if that loses material meaning, stop for user-approved redaction or audience confirmation.
 
 📄 Status Report — <SHORT_TITLE>
 
@@ -17,8 +20,8 @@
 
 <WHAT_HAPPENED>
 # Plain-language narrative: the symptom as the audience experienced it, then the root cause
-# explained for a non-technical reader. Call out anything counterintuitive ("only Bradesco
-# uses this kind of certificate; the others kept working").
+# explained for a non-technical reader without restricted implementation details. Call out
+# anything counterintuitive ("only Bradesco used this integration path; the others kept working").
 
 *<WHY_PARTIAL_HEADER>?*                              # optional section — explains nuance, e.g. why only some cases were hit
                                                      # Remove the whole section if there is no such nuance.

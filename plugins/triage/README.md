@@ -20,9 +20,9 @@ It reuses the **method** of the `sdd` plugin (plan / implement / review) without
 ## Usage
 
 ```
-/triage:jira SUS                      # sweep board SUS, status "Priorizado" (default)
-/triage:jira CL,DEL                   # sweep boards CL and DEL, status "Priorizado"
-/triage:jira SUS --status=Ready       # override the status for a one-off run
+$triage:jira SUS                      # sweep board SUS, status "Priorizado" (default)
+$triage:jira CL,DEL                   # sweep boards CL and DEL, status "Priorizado"
+$triage:jira SUS --status=Ready       # override the status for a one-off run
 ```
 
 Status defaults to **`Priorizado`** — the queue of human-prioritized tickets that are safe to triage.

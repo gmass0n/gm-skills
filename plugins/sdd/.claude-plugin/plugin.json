@@ -1,7 +1,7 @@
 {
   "name": "sdd",
   "description": "Spec-Driven Development workflow: codebase mapping, spec, plan, implement, review and debug skills that prove every requirement is built and tested. Priority-tagged requirements, evidence-or-zero coverage, a P0 mutation/discrimination sensor, blind multi-lens local code review with adversarial verification, and a self-improving lessons memory. Brownfield-first.",
-  "version": "0.10.1",
+  "version": "0.11.0",
   "author": {
     "name": "Gabriel Masson"
   }

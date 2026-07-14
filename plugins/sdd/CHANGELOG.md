@@ -3,6 +3,11 @@
 All notable changes to the `sdd` plugin are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions track `.claude-plugin/plugin.json`.
 
+## [0.11.0] — 2026-07-14
+
+### Changed
+- All SDD skills are now user-invoked only. Automatic discovery and cross-skill chaining were replaced by explicit manual handoffs.
+
 ## [0.10.0] — 2026-06-27
 
 New skill `sdd:review` — the enterprise-grade **local** code review of any target, filling the gap between `sdd:implement`'s intra-task Post-Gate Review and the remote-PR `prs-review`. Pure orchestration (the same anti-hallucination DNA as `implement`/`debug`); the only executable addition is `review.js` (Node, stdlib-only), verified by its own `--selftest`.
