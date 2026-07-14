@@ -1,62 +1,64 @@
 ---
 name: github
-description: Preparar ou finalizar uma release GitHub por repositório, com changelog, draft, PR e gates de merge.
+description: Prepare or finalize a GitHub release per repository, with a changelog, draft, PR, and merge gates.
 disable-model-invocation: true
 ---
 
 # GitHub Release
 
-Prepare ou finalize a release de um único repositório. Prove toda afirmação a
-partir do histórico e do diff desse repositório. `CHANGELOG.md` é técnico;
-notas de release são amigáveis e sempre separadas.
+Prepare or finalize a release for a single repository. Prove every claim from
+that repository's history and diff. `CHANGELOG.md` is technical; release notes
+are user-friendly and always separate.
 
-Aplique também o contrato comum em [../shared/release-contract.md](../shared/release-contract.md).
+Also apply the shared contract in [../shared/release-contract.md](../shared/release-contract.md).
 
 ## Guardrails
 
-- PREPARE cria apenas uma release draft e nunca faz merge.
-- FINALIZE publica e faz merge somente após uma confirmação explícita.
-- Detecte branch, prefixo de tag, nomes e idioma antes de usá-los; defaults só
-  servem para primeira release, após confirmação do usuário.
-- Nunca sobrescreva artefatos existentes silenciosamente.
-- Antes de rebase ou force-push, crie `backup/<branch>-pre-rebase-<YYYYMMDD-HHMM>`,
-  mostre alternativas e aguarde confirmação. Nunca faça rollback automático.
-- Todo push que reescreve uma branch exige nova leitura do HEAD remoto imediatamente
-  antes do push e `--force-with-lease` preso àquele SHA; se divergir, pare e
-  mostre os SHAs. Nunca force uma tag sem confirmação explícita e separada.
-- Todo CHANGELOG e corpo de PR contém Migration notes, inclusive
+- PREPARE creates only a draft release and never merges.
+- FINALIZE publishes and merges only after explicit confirmation.
+- Detect the branch, tag prefix, names, and language before using them; defaults
+  are only for the first release, after user confirmation.
+- Never silently overwrite existing artifacts.
+- Before a rebase or force-push, create `backup/<branch>-pre-rebase-<YYYYMMDD-HHMM>`,
+  show alternatives, and wait for confirmation. Never roll back automatically.
+- Every push that rewrites a branch requires reading the remote HEAD again
+  immediately before the push and using `--force-with-lease` pinned to that SHA;
+  stop and show the SHAs if it diverges. Never force a tag without separate,
+  explicit confirmation.
+- Every CHANGELOG and PR body contains Migration notes, including
   `No migration required.`.
 
-Consulte [../shared/conventions.md](../shared/conventions.md) ao detectar convenções, calcular a
-versão ou lidar com primeira release. Consulte [templates.md](templates.md)
-ao escrever CHANGELOG, notas, corpo de PR e relatórios finais.
+Consult [../shared/conventions.md](../shared/conventions.md) when detecting
+conventions, calculating the version, or handling the first release. Consult
+[templates.md](templates.md) when writing the CHANGELOG, notes, PR body, and
+final reports.
 
-## Fluxo
+## Flow
 
-### 1. Validar e detectar
+### 1. Validate and detect
 
-Confirme caminho/repositório git, `origin`, autenticação `gh` e
-`<owner>/<repo>` obtido de `origin`; se houver apenas um nome, peça o caminho ou
-owner. Detecte `dev` ou `develop`, a tag mais recente, produção (o branch que
-contém a última tag), manifesto/versionamento, convenções de release, CHANGELOG
-e idioma. Exiba o resumo detectado. Para primeira release, confirme os defaults
-antes de continuar.
+Confirm the git path/repository, `origin`, `gh` authentication, and
+`<owner>/<repo>` obtained from `origin`; if there is only a name, ask for the
+path or owner. Detect `dev` or `develop`, the latest tag, production (the branch
+containing the latest tag), the manifest/versioning, release conventions,
+CHANGELOG, and language. Show the detected summary. For the first release,
+confirm the defaults before continuing.
 
-### 2. Sondar estado
+### 2. Probe state
 
-Para a versão candidata, procure branch local/remoto `release/v<X.Y.Z>`, tag,
-PR aberto para produção e release GitHub.
+For the candidate version, look for the local/remote `release/v<X.Y.Z>` branch,
+tag, open PR to production, and GitHub release.
 
-- Nenhum artefato: PREPARE.
-- Todos (branch, PR aberto para produção, tag e release draft): ofereça FINALIZE.
-- Parte deles: mostre a tabela de estado e peça `abort` ou `resume`.
-- Release publicada: se PR estiver aberto, ofereça somente seu merge; se já foi
-  merged, pare e peça uma versão maior.
+- No artifacts: PREPARE.
+- All artifacts (branch, open PR to production, tag, and draft release): offer FINALIZE.
+- Some artifacts: show the state table and ask for `abort` or `resume`.
+- Published release: if a PR is open, offer only its merge; if it is already
+  merged, stop and request a higher version.
 
-### 3. Computar e analisar delta
+### 3. Compute and analyze the delta
 
-Faça `git fetch origin <dev> <prod> --tags`, verificando o HEAD remoto de
-`origin/<dev>` pela API GitHub antes de usar a ref. O delta é exclusivamente:
+Run `git fetch origin <dev> <prod> --tags`, verifying the remote HEAD of
+`origin/<dev>` through the GitHub API before using the ref. The delta is exclusively:
 
 ```bash
 git log --cherry-pick --right-only --no-merges \
@@ -64,68 +66,72 @@ git log --cherry-pick --right-only --no-merges \
   --format='%H %s' origin/<prod>...origin/<dev>
 ```
 
-Se estiver vazio, pare. Registre o SHA remoto verificado. Para até oito commits,
-analise um lote; acima disso, divida em lotes de oito e analise em paralelo. Os
-investigadores retornam somente fatos por commit (`sha`, tipo, resumo,
-migrations, env vars, endpoints, events, schema, removidos e breaking), sem
-diffs crus. Restrinja cada investigação a `git show --stat` e arquivos-chave.
+If it is empty, stop. Record the verified remote SHA. For up to eight commits,
+analyze one batch; above that, split into batches of eight and analyze in
+parallel. Investigators return only facts per commit (`sha`, type, summary,
+migrations, env vars, endpoints, events, schema, removals, and breaking
+changes), without raw diffs. Restrict each investigation to `git show --stat`
+and key files.
 
-### 4. Propor versão e artefatos
+### 4. Propose the version and artifacts
 
-Derive major/minor/patch pelos commits convencionais. Releia pontualmente cada
-migration, endpoint, env var e remoção antes de afirmá-los. Mostre versão e
-justificativa e espere confirmação explícita: não crie branch, commit, tag ou
-altere arquivos antes dela.
+Derive major/minor/patch from conventional commits. Re-read each migration,
+endpoint, env var, and removal before claiming it. Show the version and
+rationale and wait for explicit confirmation: do not create a branch, commit,
+tag, or file changes before then.
 
-Com a versão confirmada, produza o bloco técnico no CHANGELOG e as notas
-amigáveis, sem reutilizar o mesmo texto. Veja os formatos e regras em
+With the version confirmed, produce the technical CHANGELOG block and
+user-friendly notes without reusing the same text. See the formats and rules in
 [templates.md](templates.md).
 
-### 5. Preparar
+### 5. Prepare
 
-Partindo do SHA remoto registrado, crie `release/v<X.Y.Z>`. Altere somente o
-campo de versão do manifesto detectado, sem instalação ou lockfile; atualize o
-CHANGELOG e faça um único commit no estilo detectado, sem footer de IA.
+Starting from the recorded remote SHA, create `release/v<X.Y.Z>`. Change only
+the version field in the detected manifest, without installing dependencies or
+changing the lockfile; update the CHANGELOG and make one commit in the detected
+style, without an AI footer.
 
-Publique normalmente a branch, abra o PR para produção, crie/push a tag na
-branch e crie a release GitHub draft com as notas amigáveis. Verifique a
-mergeabilidade. Se estiver limpa, informe branch, tag, PR, draft e os próximos
-passos: revisar, mergear PR por merge commit, publicar draft e deploy.
+Push the branch normally, open the PR to production, create/push the tag on the
+branch, and create the draft GitHub release with the user-friendly notes. Verify
+mergeability. If it is clean, report the branch, tag, PR, draft, and next steps:
+review, merge the PR with a merge commit, publish the draft, and deploy.
 
-### 6. Tratar conflito
+### 6. Handle conflicts
 
-PR em conflito é parada: diagnostique com o mesmo delta e comparação de árvore.
-Apresente rebase de `dev` sobre produção, merge `--no-ff` ou cherry-pick do
-delta, com trade-offs. Para divergência só cosmética, recomende rebase, mas só
-execute após confirmação e backup. Se houve rebase, confirme antes de
-force-push de `dev`, branch release e tag. Para cada branch reescrita, obtenha
-seu SHA atual com `git ls-remote origin refs/heads/<branch>` imediatamente antes
-do push, compare-o ao SHA esperado/fetchado e só então use
+Conflicted PRs are a stop condition: diagnose them with the same delta and tree
+comparison. Present a rebase of `dev` onto production, a `--no-ff` merge, or a
+cherry-pick of the delta, with trade-offs. For cosmetic-only divergence,
+recommend a rebase, but execute it only after confirmation and backup. If a
+rebase occurred, confirm before force-pushing `dev`, the release branch, and the
+tag. For every rewritten branch, obtain its current SHA with
+`git ls-remote origin refs/heads/<branch>` immediately before the push, compare
+it with the expected/fetched SHA, and only then use
 `git push --force-with-lease=refs/heads/<branch>:<remote-sha> origin <branch>`.
-Se qualquer SHA divergir, não faça push e reporte estado local/remoto. Tag só
-pode ser movida após uma confirmação explícita separada; revalide a tag remota
-e mostre o SHA antigo/novo antes do `git push --force origin refs/tags/<tag>`.
-Mova branch/tag somente nesse fluxo e confira se o draft continua correto.
+If any SHA diverges, do not push and report the local/remote state. A tag may be
+moved only after separate, explicit confirmation; revalidate it and show the
+old/new SHAs before `git push --force origin refs/tags/<tag>`. Move a branch/tag
+only in this flow and verify that the draft remains correct.
 
-### 7. Finalizar
+### 7. Finalize
 
-Revalide em tempo real PR aberto (`release/v<X.Y.Z>` → produção), mergeável,
-draft ainda draft e tag remota. Antes de mostrar a confirmação, obtenha o
-`tagName` da draft, o HEAD remoto de `release/v<X.Y.Z>` e o SHA da tag remota
-(use o SHA descascado para tag anotada). `tagName` deve ser exatamente a tag
-candidata e os dois SHAs devem ser iguais. Qualquer ausência ou divergência é
-parada: mostre a tabela `draft tagName / candidate tag / branch HEAD / tag SHA`
-e não faça merge ou publicação. Se houver conflito, volte ao tratamento de
-conflito. Mostre o plano de finalize e aguarde uma confirmação para mergear
-primeiro e publicar depois. O padrão é `gh pr merge <num> --merge`; honre outro
-método apenas se o usuário o escolheu explicitamente nessa execução.
+Revalidate in real time the open PR (`release/v<X.Y.Z>` → production),
+mergeability, draft status, and remote tag. Before showing the confirmation,
+obtain the draft's `tagName`, the remote HEAD of `release/v<X.Y.Z>`, and the
+remote tag SHA (use the peeled SHA for an annotated tag). `tagName` must be
+exactly the candidate tag and the two SHAs must match. Any absence or divergence
+is a stop condition: show the table `draft tagName / candidate tag / branch HEAD /
+tag SHA` and do not merge or publish. If there is a conflict, return to conflict
+handling. Show the finalize plan and wait for confirmation to merge first and
+publish afterward. The default is `gh pr merge <num> --merge`; honor another
+method only if the user explicitly chose it in that run.
 
-A tag permanece no commit de release. Após merge, confirme que ela é ancestral
-de produção, publique a draft, confirme PR `MERGED`, release não-draft e tag no
-commit esperado, então entregue o relatório de go-live de [templates.md](templates.md).
+The tag remains on the release commit. After merging, confirm that it is an
+ancestor of production, publish the draft, confirm the PR is `MERGED`, the
+release is no longer a draft, and the tag points to the expected commit; then
+deliver the go-live report from [templates.md](templates.md).
 
-## Conclusão
+## Completion
 
-PREPARE termina com draft e próximos passos. FINALIZE termina apenas depois de
-verificar merge, publicação e tag. Se qualquer operação protegida falhar, pare
-e reporte o estado atual, a referência de backup e comandos de recuperação.
+PREPARE ends with a draft and next steps. FINALIZE ends only after verifying the
+merge, publication, and tag. If any protected operation fails, stop and report
+the current state, backup reference, and recovery commands.
