@@ -13,14 +13,15 @@ that fallback.
 
 ## Interview
 
-Start a `/grilling` session before reading Jira or publishing an artifact.
-`/grill-me` is only an alias for the same protocol; use `/grilling` as the
-single interview entrypoint.
+Interview the user relentlessly about every aspect of the request until shared
+understanding is reached. Walk each branch of the design tree and resolve
+dependent decisions one at a time. For every question, provide a recommended
+answer.
 
-Ask one question at a time and wait for its answer. Investigate facts in the
-named codebases instead of asking about them; ask the user to decide intent,
-scope, constraints, tradeoffs, and acceptance. Cover every unresolved decision
-that changes the proposed issue.
+Ask one question at a time and wait for the answer before continuing. When a
+fact can be found in the named codebase, investigate it instead of asking. Put
+decisions about intent, scope, constraints, tradeoffs, and acceptance to the
+user, then wait for the decision.
 
 Do not collect Jira data, write a local artifact, or create/update an issue
 until the user confirms shared understanding of the problem and intended
