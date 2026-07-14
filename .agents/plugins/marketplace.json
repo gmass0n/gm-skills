@@ -41,10 +41,10 @@
       "category": "Productivity"
     },
     {
-      "name": "github-release",
+      "name": "release",
       "source": {
         "source": "local",
-        "path": "./plugins/github-release"
+        "path": "./plugins/release"
       },
       "policy": {
         "installation": "AVAILABLE",

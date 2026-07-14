@@ -1,0 +1,15 @@
+{
+  "name": "release",
+  "version": "0.1.0",
+  "description": "User-invoked release workflows for GitHub and Bitbucket.",
+  "author": "Gabriel Masson",
+  "repository": "https://github.com/gmass0n/gm-skills",
+  "license": "MIT",
+  "keywords": ["release", "github", "bitbucket", "changelog", "versioning"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Release",
+    "shortDescription": "Prepare and finalize releases on GitHub or Bitbucket with explicit safety gates.",
+    "category": "Productivity"
+  }
+}

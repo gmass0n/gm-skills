@@ -1,99 +1,101 @@
 ---
 name: prs-review
-description: Revisão consolidada e multi-plataforma de Pull Requests.
+description: Consolidated, multi-platform Pull Request review.
 disable-model-invocation: true
 ---
 
 # PRs Review
 
-Revise um lote relacionado de PRs do Bitbucket, GitHub ou ambos e entregue um
-único veredito ClickUp-ready. O escopo é o diff novo de cada PR; não invente
-contratos, regras ou contexto entre repositórios.
+Review a related batch of PRs from Bitbucket, GitHub, or both and deliver one
+ClickUp-ready verdict. The scope is each PR's new diff; do not invent contracts,
+rules, or context across repositories.
 
-## Antes de começar
+## Before starting
 
-Exija os links dos PRs e o contexto da task. Se faltar contexto, pergunte
-`Qual o contexto/detalhamento da task que esses PRs implementam?` e pare.
+Require the PR links and task context. If context is missing, ask
+`What context/details does the task implemented by these PRs have?` and stop.
 
-Normalize URLs com `www.`, barra final ou fragmentos. Aceite somente:
+Normalize URLs with `www.`, trailing slashes, or fragments. Accept only:
 
 - `bitbucket.org/<workspace>/<repo>/pull-requests/<id>`;
 - `github.com/<owner>/<repo>/pull/<number>`.
 
-Host desconhecido: peça esclarecimento, sem adivinhar.
+Unknown host: ask for clarification; do not guess.
 
-Verifique apenas os MCPs das plataformas presentes antes de coletar qualquer
-PR. Carregue uma deferred tool via ToolSearch quando necessário.
+Check only the MCPs for the platforms present before collecting any PR. Load a
+deferred tool through ToolSearch when necessary.
 
 - Bitbucket: `mcp__bitbucket__getPullRequest`,
   `mcp__bitbucket__getPullRequestDiff`, `mcp__bitbucket__getPullRequestCommits`.
-- GitHub: `mcp__github__pull_request_read` e, para arquivos no branch,
+- GitHub: `mcp__github__pull_request_read` and, for branch files,
   `mcp__github__get_file_contents`.
 
-Além desses mínimos, descubra na plataforma a operação que lista os arquivos
-alterados (e a de conteúdo do arquivo no head do PR, se ela for separada). Não
-comece a análise sem conseguir paginar essa lista até o fim. Se o conector não
-expuser a operação necessária, a revisão daquele PR fica incompleta e rejeitada
-— nunca presuma que o diff recebido representa todos os arquivos.
+Beyond these minimums, discover the platform operation that lists changed files
+(and the file-content operation at the PR head, if separate). Do not start the
+analysis until that list can be paginated to the end. If the connector does not
+expose the required operation, that PR's review is incomplete and rejected —
+never assume the received diff represents every file.
 
-Se algum MCP necessário estiver ausente, encerre sem revisão parcial usando
-exatamente uma das respostas abaixo:
+If a required MCP is missing, end without a partial review using exactly one of
+the following responses:
 
-> 🚫 Review bloqueado: MCP do Bitbucket não instalado. Instale o MCP do Bitbucket e tente novamente.
+> 🚫 Review blocked: Bitbucket MCP is not installed. Install the Bitbucket MCP and try again.
 
-> 🚫 Review bloqueado: MCP do GitHub não instalado. Instale o MCP do GitHub e tente novamente. Guia em `references/github-mcp-install.md`.
+> 🚫 Review blocked: GitHub MCP is not installed. Install the GitHub MCP and try again. See `references/github-mcp-install.md`.
 
-> 🚫 Review bloqueado: MCPs faltando para as plataformas usadas: <lista>. Instale e tente novamente.
+> 🚫 Review blocked: MCPs missing for the platforms used: <list>. Install them and try again.
 
-## Fluxo
+## Flow
 
-1. Para cada PR, obtenha autor, número real de commits, repo, id, URL original e
-   plataforma. No GitHub, use `pull_request_read` com `method: "get"`; use
-   `get_commits` somente se precisar da lista. No Bitbucket, use os endpoints
-   de PR e commits.
-2. Revise todos os PRs em paralelo, um subagente por PR, quando houver suporte.
-   Se não houver subagentes, revise inline e sequencialmente; isso não é motivo
-   para cancelar o lote.
-3. Primeiro construa o inventário completo: pagine a lista de arquivos
-   alterados até não haver próxima página e registre cada caminho/status. Faça
-   isso também na revisão inline; delegar não transfere a prova de cobertura.
-   Depois busque o diff pelo MCP: Bitbucket `getPullRequestDiff`; GitHub
-   `pull_request_read(method: "get_diff")` e `get_files` paginado. Reconcilie
-   diff, páginas e inventário: cada arquivo alterado precisa estar marcado como
-   lido. Para patch ausente, truncado ou binário, busque o conteúdo do arquivo
-   no head do PR e revise-o no escopo da mudança; se não puder obter ou ler esse
-   conteúdo, marque a cobertura como incompleta. Não aprove PR/lote com qualquer
-   arquivo não lido: inclua um blocker explícito de cobertura incompleta.
-4. Aplique a doutrina da `sdd:review`: lentes cegas, depois verificação
-   adversarial. Procure, nos caches Claude e Codex,
-   `~/.claude/plugins/cache/gm-skills/sdd/*/skills/review/` e
-   `~/.codex/plugins/cache/gm-skills/sdd/*/skills/review/`; escolha a maior
-   versão semver compatível, que contenha **ambos** `references/review-lenses.md` e
-   `references/verification-discipline.md`, e leia-os. Se não houver versão
-   compatível, informe em uma linha que a doutrina completa não estava
-   disponível e aplique lentes de correctness, security, performance,
-   architecture/DRY-SOLID e spec, seguidas de tentativa explícita de refutação.
-5. Gere hipóteses apenas em linhas adicionadas ao diff. Verifique cada hipótese
-   contra o branch do PR e callers/contratos pontuais; não explore o repositório
-   inteiro. Para um possível blocker, uma segunda verificação fresca deve
-   confirmá-lo. Divergência rebaixa o item para warning com `confirmar:`.
-   Itens refutados e questions não entram no veredito; partial vira warning.
-6. Retorne somente blockers, warnings e praise concretos, com
-   `arquivo:Llinha`. Descarte nits.
-7. Consolide: qualquer blocker — inclusive cobertura incompleta — rejeita o
-   lote e o PR correspondente; sem blocker aprova ambos. Grave o resultado em
-   `code-review-<TASK-KEY-ou-AAAA-MM-DD>.txt` no diretório atual.
+1. For each PR, obtain the author, actual commit count, repository, id, original
+   URL, and platform. On GitHub, use `pull_request_read` with `method: "get"`;
+   use `get_commits` only if the list is needed. On Bitbucket, use the PR and
+   commit endpoints.
+2. Review all PRs in parallel, one subagent per PR, when supported. If subagents
+   are unavailable, review inline and sequentially; that is not a reason to
+   cancel the batch.
+3. First build the complete inventory: paginate the changed-file list until
+   there is no next page and record every path/status. Do this for inline review
+   too; delegation does not transfer proof of coverage. Then fetch the diff via
+   the MCP: Bitbucket `getPullRequestDiff`; GitHub
+   `pull_request_read(method: "get_diff")` and paginated `get_files`. Reconcile
+   the diff, pages, and inventory: every changed file must be marked as read.
+   For missing, truncated, or binary patches, fetch the file content at the PR
+   head and review it within the change scope; if it cannot be obtained or read,
+   mark coverage incomplete. Do not approve a PR/batch with any unread file:
+   include an explicit incomplete-coverage blocker.
+4. Apply the `sdd:review` doctrine: blind lenses, followed by adversarial
+   verification. Search the Claude and Codex caches,
+   `~/.claude/plugins/cache/gm-skills/sdd/*/skills/review/` and
+   `~/.codex/plugins/cache/gm-skills/sdd/*/skills/review/`; choose the highest
+   compatible semver version containing **both**
+   `references/review-lenses.md` and `references/verification-discipline.md`,
+   and read them. If no compatible version exists, report in one line that the
+   complete doctrine was unavailable and apply correctness, security,
+   performance, architecture/DRY-SOLID, and spec lenses, followed by an explicit
+   refutation attempt.
+5. Generate hypotheses only from lines added to the diff. Verify each hypothesis
+   against the PR branch and focused callers/contracts; do not explore the whole
+   repository. A possible blocker requires a second fresh verification to
+   confirm it. Divergence downgrades the item to a warning with `confirm:`.
+   Refuted items and questions do not enter the verdict; partial becomes a
+   warning.
+6. Return only concrete blockers, warnings, and praise, with `file:Lline`.
+   Discard nits.
+7. Consolidate: any blocker — including incomplete coverage — rejects the batch
+   and corresponding PR; with no blocker, approve both. Save the result to
+   `code-review-<TASK-KEY-or-YYYY-MM-DD>.txt` in the current directory.
 
-Leia [o contrato de saída](references/output-contract.md) antes de gravar o
-arquivo. Ele é obrigatório para a formatação, agrupamento e omissões. Leia
-[os prompts de plataforma](references/subagent-prompt-bitbucket.md) ou
-[GitHub](references/subagent-prompt-github.md) ao delegar a revisão; eles
-contêm as particularidades de cada MCP. Para um exemplo completo do arquivo,
-leia [example-verdict.md](references/example-verdict.md). Consulte
-[github-mcp-install.md](references/github-mcp-install.md) apenas quando o MCP
-do GitHub precisar ser instalado.
+Read [the output contract](references/output-contract.md) before writing the
+file. It is mandatory for formatting, grouping, and omissions. Read
+[the platform prompts](references/subagent-prompt-bitbucket.md) or
+[GitHub](references/subagent-prompt-github.md) when delegating review; they
+contain the specifics of each MCP. For a complete file example, read
+[example-verdict.md](references/example-verdict.md). Consult
+[github-mcp-install.md](references/github-mcp-install.md) only when the GitHub
+MCP needs to be installed.
 
-## Conclusão
+## Completion
 
-Responda no chat somente o caminho do `.txt` gerado. Nada do veredito deve ir
-no chat.
+Respond in chat with only the path to the generated `.txt`. None of the verdict
+may be included in chat.
