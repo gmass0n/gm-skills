@@ -13,7 +13,8 @@ Start with `$gm-skills:help` when you need to choose a workflow. It maps one obj
 | Plan or execute end-to-end QA | `$qa:plan`, `$qa:test` |
 | Triage Jira work | `$triage:jira` |
 | Review remote pull requests | `$prs-review:prs-review` |
-| Prepare or finalize a GitHub release | `$github-release:github-release` |
+| Prepare or finalize a GitHub release | `$release:github` |
+| Prepare or finalize a Bitbucket release | `$release:bitbucket` |
 | Write a status update | `$status-report:status-report` |
 
 Each skill keeps its own prerequisites, artifacts, guardrails, and completion checks. When one workflow phase finishes, invoke its next phase yourself; for example, after an approved specification run `$sdd:plan`, then `$sdd:implement` only after the plan is approved.
@@ -30,7 +31,7 @@ Each skill keeps its own prerequisites, artifacts, guardrails, and completion ch
 /plugin install status-report@gm-skills
 /plugin install triage@gm-skills
 /plugin install prs-review@gm-skills
-/plugin install github-release@gm-skills
+/plugin install release@gm-skills
 ```
 
 ### OpenAI Codex
@@ -54,5 +55,5 @@ gm-skills/
     ├── status-report/
     ├── triage/
     ├── prs-review/
-    └── github-release/
+    └── release/          # GitHub and Bitbucket
 ```

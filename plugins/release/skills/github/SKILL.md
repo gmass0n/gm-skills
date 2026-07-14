@@ -1,6 +1,6 @@
 ---
-name: github-release
-description: Preparação e finalização segura de releases GitHub por repositório.
+name: github
+description: Preparar ou finalizar uma release GitHub por repositório, com changelog, draft, PR e gates de merge.
 disable-model-invocation: true
 ---
 
@@ -9,6 +9,8 @@ disable-model-invocation: true
 Prepare ou finalize a release de um único repositório. Prove toda afirmação a
 partir do histórico e do diff desse repositório. `CHANGELOG.md` é técnico;
 notas de release são amigáveis e sempre separadas.
+
+Aplique também o contrato comum em [../shared/release-contract.md](../shared/release-contract.md).
 
 ## Guardrails
 
@@ -25,7 +27,7 @@ notas de release são amigáveis e sempre separadas.
 - Todo CHANGELOG e corpo de PR contém Migration notes, inclusive
   `No migration required.`.
 
-Consulte [conventions.md](conventions.md) ao detectar convenções, calcular a
+Consulte [../shared/conventions.md](../shared/conventions.md) ao detectar convenções, calcular a
 versão ou lidar com primeira release. Consulte [templates.md](templates.md)
 ao escrever CHANGELOG, notas, corpo de PR e relatórios finais.
 

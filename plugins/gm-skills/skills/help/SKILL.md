@@ -20,7 +20,8 @@ Identifique o objetivo do usuário e responda somente com o comando explícito m
 | Executar um plano de QA aprovado | `$qa:test` |
 | Triar tarefas do Jira | `$triage:jira` |
 | Revisar um ou mais PRs remotos | `$prs-review:prs-review` |
-| Preparar ou finalizar uma release GitHub | `$github-release:github-release` |
+| Preparar ou finalizar uma release GitHub | `$release:github` |
+| Preparar ou finalizar uma release Bitbucket | `$release:bitbucket` |
 | Produzir atualização de status | `$status-report:status-report` |
 
 Concluído quando o usuário tiver um único comando explícito para invocar. Se houver mais de um objetivo, peça que escolha o primeiro.

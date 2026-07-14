@@ -24,9 +24,9 @@
       "description": "User-invoked status report and action-plan workflow."
     },
     {
-      "name": "github-release",
-      "source": "./plugins/github-release",
-      "description": "User-invoked GitHub release preparation and finalization."
+      "name": "release",
+      "source": "./plugins/release",
+      "description": "User-invoked GitHub and Bitbucket release preparation and finalization."
     },
     {
       "name": "triage",
