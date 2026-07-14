@@ -19,7 +19,8 @@ and one short scope sentence. Do not run another skill or start work.
 | Review local changes before publishing | `$sdd:review` |
 | Plan end-to-end QA | `$qa:plan` |
 | Execute an approved QA plan | `$qa:test` |
-| Triage Jira tasks | `$triage:jira` |
+| Explore one Jira task before implementation | `$jira:discovery` |
+| Triage a bounded Jira board | `$jira:triage` |
 | Review one or more remote PRs | `$prs-review:prs-review` |
 | Prepare or finalize a GitHub release | `$release:github` |
 | Prepare or finalize a Bitbucket release | `$release:bitbucket` |

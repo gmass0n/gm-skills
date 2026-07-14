@@ -67,7 +67,7 @@ First, normalize input before fetching tickets. Split `boards` on commas, trim a
 project in (<boards>) AND status = "<status>" ORDER BY created ASC
 ```
 
-e.g. for `$triage:jira SUS` → `project = SUS AND status = "Priorizado" ORDER BY created ASC`. If `status` contains spaces or accents, keep it quoted. Pass the **list of `{key, title, description, labels, components}`** to the single subagent.
+e.g. for `$jira:triage SUS` → `project = SUS AND status = "Priorizado" ORDER BY created ASC`. If `status` contains spaces or accents, keep it quoted. Pass the **list of `{key, title, description, labels, components}`** to the single subagent.
 
 Keep the resulting `{query_or_filter, tickets:[{key,title}]}` as the selection record. Immediately before Phase 3, display it verbatim and confirm every viable ticket is in that exact list; a ticket absent from the record cannot receive a PR.
 
