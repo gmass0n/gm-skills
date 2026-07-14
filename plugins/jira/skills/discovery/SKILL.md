@@ -1,98 +1,110 @@
 ---
 name: discovery
-description: Interview, discover, and publish an evidence-backed Jira brief.
+description: Interview, investigate, and publish an evidence-backed Jira task, bug, or story. Use when the user asks to create a new Jira work item or update a named existing issue and wants the board, scope, and evidence understood before publication.
 disable-model-invocation: true
 ---
 
 # Jira Discovery
 
-Run `$jira:discovery <JIRA-KEY | problem brief> [optional repo paths or names]` to turn
-one problem into a small, evidence-backed Jira artifact. Publish it directly
-to Jira when the MCP can write; use a local `.txt` only after the user accepts
-that fallback.
+Run `$jira:discovery <JIRA-KEY | problem brief> [optional repo paths or names]` to
+turn one request into one evidence-backed Jira artifact. Follow the phases in
+order. Do not skip the interview or publish from a prompt alone.
 
-## Interview
+## 1. Availability
 
-Interview the user relentlessly about every aspect of the request until shared
-understanding is reached. Walk each branch of the design tree and resolve
-dependent decisions one at a time. For every question, provide a recommended
-answer.
+Check only whether a Jira/Atlassian MCP is available and exposes native read
+and write issue operations. Discover deferred tools through ToolSearch. Do not
+read Jira, inspect repositories, write a local artifact, or create/update an
+issue in this phase.
 
-Ask one question at a time and wait for the answer before continuing. When a
-relevant codebase is available, investigate facts there instead of asking. Put
-decisions about intent, scope, constraints, tradeoffs, and acceptance to the
-user, then wait for the decision. A repository is optional; product and
-reporting requests can proceed from the interview and Jira context alone.
+If the MCP is unavailable, respond exactly and stop:
 
-Do not collect Jira data, write a local artifact, or create/update an issue
-until the user confirms shared understanding of the problem and intended
-outcome.
+> 🚫 Discovery blocked: Jira MCP with native issue read and write operations is required to publish discovery. Continue with a local `.txt` instead? (yes/no)
 
-## Gate
+Only after an explicit `yes`, use local fallback. In fallback mode, do not call
+a Jira write operation.
 
-Check only for the Jira/Atlassian MCP before collecting ticket data. Discover
-its available read and write operations through ToolSearch when deferred.
-Confirm that the connected account can create an issue and update an existing
-issue in the target project. Use the MCP's native issue methods; never
-fabricate ticket fields or access Jira through a browser, curl, or a local
-cache.
+## 2. Interview
 
-If the MCP is unavailable or lacks either required write capability, respond
-exactly and stop:
+Interview first, one question at a time. Provide a recommended answer and wait
+for the user's response. Do not investigate the board or code until the user
+confirms shared understanding.
 
-> 🚫 Discovery blocked: Jira MCP with create and update permissions is required to publish discovery. Continue with a local `.txt` instead? (yes/no)
+Resolve these decisions, using facts already supplied by the user and asking
+only for missing material decisions:
 
-Only after an explicit `yes`, continue in local fallback mode. In fallback
-mode, do not call a Jira write operation.
+- **Operation:** a supplied Jira key means update that exact issue; otherwise
+  create one new issue. Never edit an issue found only by title similarity.
+- **Outcome and audience:** the problem, intended result, and whether this is
+  planned work or a record of a completed correction.
+- **Destination:** target Jira project/board; for a new issue, required type
+  (`Task`, `Bug`, or `Story`) if it cannot be inferred from the request.
+- **Scope:** included systems, repositories, constraints, and acceptance.
 
-## Discovery
+Treat an existing brief, branch, report, or local artifact as user-provided
+context, not as permission to skip the interview. Complete only when the user
+confirms the intended operation and outcome.
 
-1. Normalize the input after the interview. A Jira key identifies one existing issue; otherwise,
-   the supplied brief is the source request. Ask one question only when neither
-   identifies a concrete problem or impacted audience/system.
+## 3. Board discovery
 
-   Complete when the source request and intended outcome are explicit.
-2. When a key is given, fetch the issue and its relevant visible fields through
-   the Jira MCP. Record the key, title, description, acceptance criteria,
-   linked work, status, and attachments/links that change the scope. Without a
-   key, require the target Jira project before publishing a new issue.
+After the interview, inspect the target board before technical investigation.
 
-   Complete when each available scope signal is accounted for or marked absent.
-3. If repositories are named or otherwise available, inspect only the minimum
-   callers/contracts needed to trace the reported flow. If multiple repositories
-   are relevant, state which owns source data, filtering, and presentation.
-   When no repository is available, derive the scope from the interview and
-   Jira context, and record technical details as risks/questions rather than
-   assumptions.
+1. For an update, fetch the exact issue and record its title, description,
+   type, status, linked work, and fields that change scope.
+2. For a new issue, fetch the target project metadata: available issue types,
+   required fields, defaults, and any board-specific constraints. Inspect a
+   small number of recent comparable issues only when it helps explain a
+   required field or convention.
+3. Validate only the operation that will occur: `create` for a new issue or
+   `update` for the supplied issue. Do not require update permission to create,
+   nor create permission to edit.
+4. If a required field has no user-confirmed value, ask one question. Never
+   invent a product, component, sprint, parent, assignee, priority, or status.
 
-   Complete when the product scope is clear and each available technical
-   boundary is identified or explicitly uncertain.
-4. Assemble the title and description with [the output template](references/output-template.txt).
-   It is the single format reference for both Jira and local `.txt`: keep the
-   title plain, render every description section in bold, use numbered
-   acceptance criteria, and use bullets for all other lists.
+If the required operation is unavailable, offer local fallback only for that
+operation, naming it accurately. Do not select fallback because an unrelated
+permission is absent.
 
-   In Jira-first mode, create the issue for a problem brief or update the named
-   issue's title and discovery description through the Jira MCP. Preserve
-   existing fields that the artifact does not address, then return the issue
-   URL. Do not create a local `.txt`.
+## 4. Evidence discovery
 
-   In accepted local fallback mode, write `jira-<KEY-or-slug>-discovery.txt`
-   in the current directory and return its path. Do not update Jira.
+Inspect the minimum Jira context and repository callers/contracts needed to
+substantiate the agreed scope. If multiple repositories are relevant, state
+which owns source data, filtering, and presentation. Treat unverified technical
+details as risks/questions, not facts.
 
-   Complete when every claim is either evidenced or labelled as a
-   suggestion/question, and exactly one destination has received the artifact.
+For a completed correction, verify the named change and its focused regression
+check when available; do not turn the record into new implementation work.
+
+## 5. Draft and confirmation
+
+Assemble the title and description with [the output template](references/output-template.txt).
+Write user-facing text in the language of the request; keep code, URLs,
+commands, Jira keys, and `path:line` references literal. Use numbered
+acceptance criteria and bullets for other lists.
+
+Present a concise draft summary: operation, project, issue type, required
+board fields, title, and any unresolved risk. Ask for one final confirmation.
+Do not write locally or to Jira until it is received.
+
+## 6. Publish and verify
+
+- **Create:** create exactly one issue with the confirmed project, type,
+  required fields, title, and description.
+- **Update:** update only the supplied key; preserve unrelated existing fields.
+- **Local fallback:** write `jira-<KEY-or-slug>-discovery.txt` in the current
+  directory and do not call a Jira write operation.
+
+Read back the destination and verify the title, type, required fields, and
+description were saved. If the service truncates or rejects content, report the
+specific failure and ask before any corrective write.
 
 ## Boundaries
 
 - Keep discovery separate from `$jira:triage`: discovery defines one problem;
   triage selects small tickets and can open delivery PRs.
-- Treat technical implementation as a suggestion unless code or an existing
-  contract confirms it. Preserve technical unknowns as risks/questions for the
-  implementation team.
-- When a technical flow is available, prefer the smallest contract that makes
-  the decision at its owning boundary. For paginated lists or aggregate counts,
-  verify filtering before pagination/aggregation.
+- Every claim must be evidenced or labelled as a suggestion/question.
+- Prefer the smallest contract at its owning boundary. For paginated lists or
+  aggregate counts, verify filtering before pagination/aggregation.
 
 ## Completion
 
