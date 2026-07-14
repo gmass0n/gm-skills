@@ -1,71 +1,54 @@
 # Instalação do MCP do GitHub
 
-Status atual no ambiente do Gabriel (verificado via `claude mcp list`): **MCP do GitHub NÃO está instalado**. Apenas o MCP do Bitbucket está ativo.
+Este review exige um MCP GitHub quando o lote contém PRs de `github.com`.
+Instale-o no cliente em uso, reinicie a sessão e confirme as ferramentas antes
+de refazer o review. Não presuma que a configuração de Claude vale para Codex,
+nem o contrário.
 
-Esta skill exige o MCP do GitHub sempre que houver pelo menos um link de PR do `github.com` no lote. Sem ele, a skill bloqueia o review.
+## Servidor remoto recomendado
 
-## Opção 1 (recomendada) — Servidor oficial `github-mcp-server` (remoto, hospedado pelo GitHub)
+Use `https://api.githubcopilot.com/mcp/` com um PAT em uma variável de ambiente
+(`GITHUB_PERSONAL_ACCESS_TOKEN`). O token precisa de `repo` para repos privados
+ou `public_repo` para públicos; acrescente `read:org` quando necessário.
 
-O GitHub mantém um MCP server hospedado em `https://api.githubcopilot.com/mcp/`. Usa OAuth/PAT. É a forma mais simples de obter as ferramentas de PR.
-
-### Pré-requisito
-Personal Access Token (PAT) do GitHub com escopos:
-- `repo` (acesso a repos privados; use `public_repo` se for só público)
-- `read:org` (para resolver `owner` em organizações)
-
-Crie em https://github.com/settings/tokens.
-
-### Adicionar ao Claude Code
+### Codex
 
 ```bash
-claude mcp add --scope user github \
-  --transport http \
+export GITHUB_PERSONAL_ACCESS_TOKEN=<SEU_PAT>
+codex mcp add github \
   --url https://api.githubcopilot.com/mcp/ \
-  --header "Authorization: Bearer <SEU_PAT>"
+  --bearer-token-env-var GITHUB_PERSONAL_ACCESS_TOKEN
+codex mcp list
+codex mcp get github
 ```
 
-Depois verifique:
+O servidor usa bearer token; não use `codex mcp login github` para esse fluxo.
+
+### Claude Code
 
 ```bash
+claude mcp add --scope user --transport http github \
+  https://api.githubcopilot.com/mcp/ \
+  --header "Authorization: Bearer <SEU_PAT>"
 claude mcp list
 ```
 
-Deve aparecer `github: https://api.githubcopilot.com/mcp/ (HTTP) - ✓ Connected`.
+## Alternativas locais
 
-## Opção 2 — Servidor oficial `github-mcp-server` local (Docker)
+Se a política impedir o servidor remoto, configure o servidor oficial
+`ghcr.io/github/github-mcp-server` (Docker) ou
+`@modelcontextprotocol/server-github` (stdio) usando o mecanismo de MCP do
+cliente atual. Passe `GITHUB_PERSONAL_ACCESS_TOKEN` somente como segredo local;
+não o grave em repositórios nem o exponha no chat.
 
-Se preferir rodar localmente sem expor PAT em config remota:
+## Validação
 
-```bash
-claude mcp add --scope user github \
-  --transport stdio \
-  -- docker run -i --rm \
-     -e GITHUB_PERSONAL_ACCESS_TOKEN=<SEU_PAT> \
-     ghcr.io/github/github-mcp-server
-```
+Confirme que o servidor oferece leitura de metadados de PR, diff, arquivos e
+commits, além de leitura de arquivo no branch quando disponível. Os nomes podem
+variar por cliente/servidor; no contrato desta skill, os equivalentes são
+`mcp__github__pull_request_read` (`get`, `get_diff`, `get_files`,
+`get_commits`) e `mcp__github__get_file_contents`. Ferramentas deferred devem
+ser carregadas por ToolSearch.
 
-## Opção 3 — Servidor comunitário `@modelcontextprotocol/server-github` (npm, stdio)
-
-Mais antigo, mas funciona sem Docker:
-
-```bash
-claude mcp add --scope user github \
-  --transport stdio \
-  --env GITHUB_PERSONAL_ACCESS_TOKEN=<SEU_PAT> \
-  -- npx -y @modelcontextprotocol/server-github
-```
-
-## Validação após instalação
-
-Reinicie a sessão do Claude Code e confirme que estas ferramentas aparecem (podem ser deferred — carregue via ToolSearch `select:<nome>`):
-
-- `mcp__github__pull_request_read` — uma tool única com parâmetro `method`: `get` (metadata/autor/commits), `get_diff` (unified diff), `get_files` (arquivos com `patch`, paginável), `get_commits`.
-- `mcp__github__get_file_contents` (útil para explorer sub-subagents).
-
-Os nomes exatos podem variar levemente entre os três servidores acima. A skill aceita qualquer um desde que cubra os passos: ler PR (metadata), ler diff e listar arquivos/commits.
-
-## Troubleshooting rápido
-
-- **`! Needs authentication`** no `claude mcp list` → token expirado/sem escopo. Recrie o PAT com `repo` + `read:org`.
-- **Ferramentas não aparecem** → reinicie a sessão (`/reset` ou nova janela do Claude Code).
-- **HTTP 404 em `pull_request_read` com `method: "get_diff"`** no servidor remoto → caia para `method: "get_files"` (a skill já tem esse fallback).
+Se houver autenticação falha ou as ferramentas não aparecerem, confirme o token
+e os escopos e reinicie a sessão do cliente.

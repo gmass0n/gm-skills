@@ -1,0 +1,27 @@
+{
+  "name": "gm-skills",
+  "version": "0.1.0",
+  "description": "Manual router for the gm-skills plugin commands.",
+  "author": {
+    "name": "Gabriel Masson"
+  },
+  "repository": "https://github.com/gmass0n/gm-skills",
+  "license": "MIT",
+  "keywords": [
+    "skills",
+    "router",
+    "manual"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Gm Skills",
+    "shortDescription": "Choose the explicit gm-skills command for your current goal.",
+    "longDescription": "Routes a goal to one explicitly invoked gm-skills command without performing work.",
+    "developerName": "Gabriel Masson",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": [
+      "Use $gm-skills:help to choose a workflow command."
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 {
   "name": "github-release",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Standards-compliant GitHub release flow for a single repository. PREPARE mode detects the repo's conventions from git history, computes the delta since the last release, writes a technical CHANGELOG and friendly draft release notes, cuts the release branch, opens the release PR to prod and reports conflict status. FINALIZE mode publishes the draft and merges the release PR into prod behind one gated confirmation. Proves every changelog line from diffs; force-push and go-live are always gated.",
   "author": "Gabriel Masson",
   "repository": "https://github.com/gmass0n/gm-skills",

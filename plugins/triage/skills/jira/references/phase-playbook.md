@@ -59,7 +59,7 @@ First, you (orchestrator) fetch the tickets via the Jira MCP. Build the JQL from
 project in (<boards>) AND status = "<status>" ORDER BY created ASC
 ```
 
-e.g. for `/triage:jira SUS` → `project = SUS AND status = "Priorizado" ORDER BY created ASC`. If `status` contains spaces or accents, keep it quoted. Pass the **list of `{key, title, description, labels, components}`** to the single subagent.
+e.g. for `$triage:jira SUS` → `project = SUS AND status = "Priorizado" ORDER BY created ASC`. If `status` contains spaces or accents, keep it quoted. Pass the **list of `{key, title, description, labels, components}`** to the single subagent.
 
 Briefing: "Classify each ticket **from its text alone**. Do NOT read any code. For each return `{key, size, nature, ambiguous, reason}`:
 - `size ∈ {PP,P,M,G}` (PP=trivial/1-line, P=small, M=medium/one module, G=large/multi-area).

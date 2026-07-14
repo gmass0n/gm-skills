@@ -20,7 +20,9 @@ Code review de um Pull Request do **Bitbucket**.
 2. **Carregue a doutrina de review da `sdd:review`** (uma leitura por arquivo) e siga-a — não invente o motor:
    - `<sdd-review>/references/review-lenses.md` — as 5 lentes + as blocklists "What NOT to flag".
    - `<sdd-review>/references/verification-discipline.md` — a verificação adversarial (F4).
-   - Resolva `<sdd-review>` listando `~/.claude/plugins/cache/gm-skills/sdd/*/skills/review/` e pegando a **maior versão** (não hardcode). Sem o diretório → avise numa linha e siga com a doutrina mínima (lentes informais + tentar refutar cada achado contra o código real).
+   - Resolva `<sdd-review>` procurando nos dois caches:
+     `~/.claude/plugins/cache/gm-skills/sdd/*/skills/review/` e
+     `~/.codex/plugins/cache/gm-skills/sdd/*/skills/review/`. Escolha a **maior versão semver compatível** — a que contém os dois arquivos acima — sem hardcode. Sem versão compatível → avise numa linha e siga com a doutrina mínima (lentes informais + tentar refutar cada achado contra o código real).
 
 3. **Lentes (hipóteses):** aplique as 5 lentes ao diff. Cada achado é hipótese ancorada no lado `+` (linha real do arquivo). Respeite as blocklists. Gere liberalmente.
 

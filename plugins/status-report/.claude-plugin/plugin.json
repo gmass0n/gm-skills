@@ -1,7 +1,7 @@
 {
   "name": "status-report",
   "description": "Generate a polished, leadership-ready status report (and optional enterprise action plan) for any fix, incident or in-flight change — styled for WhatsApp/email, interviewing you one question at a time when context is thin.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": {
     "name": "Gabriel Masson"
   }

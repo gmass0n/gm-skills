@@ -4,39 +4,44 @@
     "name": "Gabriel Masson"
   },
   "metadata": {
-    "description": "Personal Claude Code plugins and skills.",
-    "version": "0.1.0"
+    "description": "Personal user-invoked workflow plugins.",
+    "version": "0.2.0"
   },
   "plugins": [
     {
       "name": "qa",
       "source": "./plugins/qa",
-      "description": "Lightweight end-to-end QA workflow for mono- or multi-repo projects: plan and test skills that stand up a real local stack (isolated git worktrees, dynamically-free ports, dev-vs-mock data), smoke-check it, then run a per-phase scenario checklist — frontend via Playwright MCP (sequential, browser is a singleton), backend via curl (parallel-safe). qa:plan interviews you one question at a time and writes a self-contained docs/qa/<target>/plan.md; qa:test executes that plan and returns a verdict (blockers, warnings, summary) without ever fixing code."
+      "description": "User-invoked end-to-end QA planning and execution."
     },
     {
       "name": "sdd",
       "source": "./plugins/sdd",
-      "description": "Spec-Driven Development workflow: codebase mapping, spec, plan, implement, review and debug skills that prove every requirement is built and tested. Priority-tagged requirements, evidence-or-zero coverage, a P0 mutation/discrimination sensor, blind multi-lens local code review with adversarial verification, and a self-improving lessons memory. Brownfield-first."
+      "description": "User-invoked specification, implementation, debugging, and local review."
     },
     {
       "name": "status-report",
       "source": "./plugins/status-report",
-      "description": "Generate a polished, leadership-ready status report (and optional enterprise action plan) for any fix, incident or in-flight change — styled for WhatsApp/email, interviewing you one question at a time when context is thin."
-    },
-    {
-      "name": "triage",
-      "source": "./plugins/triage",
-      "description": "Automated Jira triage pipeline: pull tasks from the boards you name, filter by size in three discarding gates, open a draft WIP PR on Bitbucket per surviving task with a plain-language summary, pause for your approval, then deliver the approved ones through the SDD TDD loop and flip the draft to Ready. Reuses the sdd plugin's plan/implement methods; nothing runs to completion without your checkpoint."
-    },
-    {
-      "name": "prs-review",
-      "source": "./plugins/prs-review",
-      "description": "Structured code review of one or more Pull Requests, Bitbucket and GitHub in the same batch. One subagent per PR (parallel, multi-repo) applies the sdd plugin's review doctrine — blind lenses plus adversarial verification — over the diff fetched via the matching MCP, and consolidates a single approved/rejected verdict with blockers, warnings and praise, written to a ClickUp-ready .txt."
+      "description": "User-invoked status report and action-plan workflow."
     },
     {
       "name": "github-release",
       "source": "./plugins/github-release",
-      "description": "Standards-compliant GitHub release flow for a single repository. PREPARE mode detects the repo's conventions from git history, computes the delta since the last release, writes a technical CHANGELOG and friendly draft release notes, cuts the release branch, opens the release PR to prod and reports conflict status. FINALIZE mode publishes the draft and merges the release PR into prod behind one gated confirmation. Proves every changelog line from diffs; force-push and go-live are always gated."
+      "description": "User-invoked GitHub release preparation and finalization."
+    },
+    {
+      "name": "triage",
+      "source": "./plugins/triage",
+      "description": "User-invoked Jira triage with approval checkpoints."
+    },
+    {
+      "name": "prs-review",
+      "source": "./plugins/prs-review",
+      "description": "User-invoked multi-platform pull-request review."
+    },
+    {
+      "name": "gm-skills",
+      "source": "./plugins/gm-skills",
+      "description": "Manual router for the gm-skills commands."
     }
   ]
 }
