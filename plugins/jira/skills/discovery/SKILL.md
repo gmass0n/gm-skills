@@ -67,15 +67,15 @@ mode, do not call a Jira write operation.
 
    Complete when the product scope is clear and each available technical
    boundary is identified or explicitly uncertain.
-4. Assemble the artifact using [the output template](references/output-template.txt):
-   title, context, objective, scope, acceptance criteria, Definition of Done,
-   out of scope, suggestions, risks/questions, affected repositories when
-   known, and evidence from Jira, the interview, or `path:line` code findings.
+4. Assemble the title and description with [the output template](references/output-template.txt).
+   It is the single format reference for both Jira and local `.txt`: keep the
+   title plain, render every description section in bold, use numbered
+   acceptance criteria, and use bullets for all other lists.
 
    In Jira-first mode, create the issue for a problem brief or update the named
-   issue's discovery content through the Jira MCP. Preserve existing fields
-   that the artifact does not address, then return the issue URL. Do not create
-   a local `.txt`.
+   issue's title and discovery description through the Jira MCP. Preserve
+   existing fields that the artifact does not address, then return the issue
+   URL. Do not create a local `.txt`.
 
    In accepted local fallback mode, write `jira-<KEY-or-slug>-discovery.txt`
    in the current directory and return its path. Do not update Jira.
