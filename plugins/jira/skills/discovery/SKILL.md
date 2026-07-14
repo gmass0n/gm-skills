@@ -1,12 +1,12 @@
 ---
 name: discovery
-description: Interview, discover, and publish an evidence-backed Jira implementation brief.
+description: Interview, discover, and publish an evidence-backed Jira brief.
 disable-model-invocation: true
 ---
 
 # Jira Discovery
 
-Run `$jira:discovery <JIRA-KEY | problem brief> [repo paths or names]` to turn
+Run `$jira:discovery <JIRA-KEY | problem brief> [optional repo paths or names]` to turn
 one problem into a small, evidence-backed Jira artifact. Publish it directly
 to Jira when the MCP can write; use a local `.txt` only after the user accepts
 that fallback.
@@ -19,9 +19,10 @@ dependent decisions one at a time. For every question, provide a recommended
 answer.
 
 Ask one question at a time and wait for the answer before continuing. When a
-fact can be found in the named codebase, investigate it instead of asking. Put
+relevant codebase is available, investigate facts there instead of asking. Put
 decisions about intent, scope, constraints, tradeoffs, and acceptance to the
-user, then wait for the decision.
+user, then wait for the decision. A repository is optional; product and
+reporting requests can proceed from the interview and Jira context alone.
 
 Do not collect Jira data, write a local artifact, or create/update an issue
 until the user confirms shared understanding of the problem and intended
@@ -48,7 +49,7 @@ mode, do not call a Jira write operation.
 
 1. Normalize the input after the interview. A Jira key identifies one existing issue; otherwise,
    the supplied brief is the source request. Ask one question only when neither
-   identifies a concrete problem or impacted system.
+   identifies a concrete problem or impacted audience/system.
 
    Complete when the source request and intended outcome are explicit.
 2. When a key is given, fetch the issue and its relevant visible fields through
@@ -57,17 +58,19 @@ mode, do not call a Jira write operation.
    key, require the target Jira project before publishing a new issue.
 
    Complete when each available scope signal is accounted for or marked absent.
-3. Inspect only the named repositories and the minimum callers/contracts needed
-   to trace the reported flow. If the request names multiple repositories,
-   trace the boundary in each and state which owns source data, filtering, and
-   presentation. Distinguish evidence from an implementation suggestion.
+3. If repositories are named or otherwise available, inspect only the minimum
+   callers/contracts needed to trace the reported flow. If multiple repositories
+   are relevant, state which owns source data, filtering, and presentation.
+   When no repository is available, derive the scope from the interview and
+   Jira context, and record technical details as risks/questions rather than
+   assumptions.
 
-   Complete when the likely root boundary and every impacted repository are
-   identified, or the uncertainty is stated.
+   Complete when the product scope is clear and each available technical
+   boundary is identified or explicitly uncertain.
 4. Assemble the artifact using [the output template](references/output-template.txt):
    title, context, objective, scope, acceptance criteria, Definition of Done,
-   out of scope, suggestions, risks/questions, affected repositories, and
-   `path:line` evidence.
+   out of scope, suggestions, risks/questions, affected repositories when
+   known, and evidence from Jira, the interview, or `path:line` code findings.
 
    In Jira-first mode, create the issue for a problem brief or update the named
    issue's discovery content through the Jira MCP. Preserve existing fields
@@ -84,12 +87,12 @@ mode, do not call a Jira write operation.
 
 - Keep discovery separate from `$jira:triage`: discovery defines one problem;
   triage selects small tickets and can open delivery PRs.
-- Prefer the smallest contract that makes the decision at the owning boundary.
-  Avoid proposing frontend-only filters when a backend/upstream source can
-  filter list, count, and stream consistently.
-- For a paginated list or aggregate count, verify that filtering happens before
-  pagination/aggregation. Flag post-page filtering as a risk rather than
-  presenting it as a solution.
+- Treat technical implementation as a suggestion unless code or an existing
+  contract confirms it. Preserve technical unknowns as risks/questions for the
+  implementation team.
+- When a technical flow is available, prefer the smallest contract that makes
+  the decision at its owning boundary. For paginated lists or aggregate counts,
+  verify filtering before pagination/aggregation.
 
 ## Completion
 

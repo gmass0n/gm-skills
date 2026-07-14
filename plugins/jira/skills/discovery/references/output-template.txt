@@ -9,7 +9,8 @@ Objective
 The intended user or product outcome.
 
 Scope
-- Repository/system: responsibility and required change.
+- Product/system: responsibility and required change.
+- Technical repository/component (when known): responsibility and required change.
 
 Acceptance criteria
 1. Observable expected behavior.
@@ -27,7 +28,7 @@ Risks / open questions
 - Unknowns that need a decision before implementation.
 
 Affected repositories
-- Repository: role in the flow.
+- Repository/component (when known): role in the flow.
 
 Evidence
-- path:line — short relevance note.
+- Jira context, interview decision, or path:line — short relevance note.
