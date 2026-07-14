@@ -19,6 +19,9 @@ notas de release são amigáveis e sempre separadas.
 - Nunca sobrescreva artefatos existentes silenciosamente.
 - Antes de rebase ou force-push, crie `backup/<branch>-pre-rebase-<YYYYMMDD-HHMM>`,
   mostre alternativas e aguarde confirmação. Nunca faça rollback automático.
+- Todo push que reescreve uma branch exige nova leitura do HEAD remoto imediatamente
+  antes do push e `--force-with-lease` preso àquele SHA; se divergir, pare e
+  mostre os SHAs. Nunca force uma tag sem confirmação explícita e separada.
 - Todo CHANGELOG e corpo de PR contém Migration notes, inclusive
   `No migration required.`.
 
@@ -93,13 +96,24 @@ PR em conflito é parada: diagnostique com o mesmo delta e comparação de árvo
 Apresente rebase de `dev` sobre produção, merge `--no-ff` ou cherry-pick do
 delta, com trade-offs. Para divergência só cosmética, recomende rebase, mas só
 execute após confirmação e backup. Se houve rebase, confirme antes de
-force-push de `dev`, branch release e tag; mova branch/tag somente nesse fluxo
-e confira se o draft continua correto.
+force-push de `dev`, branch release e tag. Para cada branch reescrita, obtenha
+seu SHA atual com `git ls-remote origin refs/heads/<branch>` imediatamente antes
+do push, compare-o ao SHA esperado/fetchado e só então use
+`git push --force-with-lease=refs/heads/<branch>:<remote-sha> origin <branch>`.
+Se qualquer SHA divergir, não faça push e reporte estado local/remoto. Tag só
+pode ser movida após uma confirmação explícita separada; revalide a tag remota
+e mostre o SHA antigo/novo antes do `git push --force origin refs/tags/<tag>`.
+Mova branch/tag somente nesse fluxo e confira se o draft continua correto.
 
 ### 7. Finalizar
 
 Revalide em tempo real PR aberto (`release/v<X.Y.Z>` → produção), mergeável,
-draft ainda draft e tag remota. Se houver conflito, volte ao tratamento de
+draft ainda draft e tag remota. Antes de mostrar a confirmação, obtenha o
+`tagName` da draft, o HEAD remoto de `release/v<X.Y.Z>` e o SHA da tag remota
+(use o SHA descascado para tag anotada). `tagName` deve ser exatamente a tag
+candidata e os dois SHAs devem ser iguais. Qualquer ausência ou divergência é
+parada: mostre a tabela `draft tagName / candidate tag / branch HEAD / tag SHA`
+e não faça merge ou publicação. Se houver conflito, volte ao tratamento de
 conflito. Mostre o plano de finalize e aguarde uma confirmação para mergear
 primeiro e publicar depois. O padrão é `gh pr merge <num> --merge`; honre outro
 método apenas se o usuário o escolheu explicitamente nessa execução.

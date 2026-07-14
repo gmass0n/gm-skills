@@ -87,8 +87,8 @@ PENDING ──payment──> PAID
 
 ## Interview decisions & constraints
 <decision log: the conditioning-HOW settled in the grill. Not a requirement, but the plan inherits it.
- Each line: decision + why + affected REQ.>
-- D-1: SSE instead of WebSocket — unidirectional is enough for REQ-1 and needs less infra. Affects REQ-1, REQ-3.
+ Each consequential delegated line: decision + why + source/anchor evidence + affected REQ.>
+- D-1: SSE instead of WebSocket — unidirectional is enough for REQ-1 and needs less infra; evidence: <source or file:line>. Affects REQ-1, REQ-3.
 - D-2: No persistence layer — REQ-2 defines a stateless stream. Affects REQ-2.
 
 ## Open clarifications

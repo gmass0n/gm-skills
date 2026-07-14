@@ -2,13 +2,17 @@
 # Same language and bold conventions as status-report.template.txt.
 # Numbered actions use keycap emoji 1️⃣ 2️⃣ 3️⃣ ... Each action: a bold title, a one-line
 # description, then an indented owner/deadline line. Keep accentuation. Remove # comments.
+# Audience-neutral: describe the remediation outcome, not credentials, internal identifiers,
+# raw logs, paths, endpoints, or exploit-relevant implementation details. Stop for approval if
+# safe wording would materially change the action.
 
 🛠️ <ACTION_PLAN_HEADER> — <SHORT_TITLE>          # e.g. "Plano de Ação — Prevenção de recorrência"
 
 *<ROOT_CAUSE_HEADER>:*                            # "Causa raiz a tratar:"
 
 <ROOT_CAUSE>
-# The underlying mechanism that must be fixed so the problem does not recur — not the symptom.
+# The underlying mechanism that must be fixed so the problem does not recur — not the symptom,
+# summarized without restricted implementation details.
 
 *<ACTIONS_HEADER>:*                               # "Ações:"
 

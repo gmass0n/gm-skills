@@ -19,6 +19,11 @@ Se dois repos tiverem o mesmo nome, use `<owner>/<repo>`.
 
 Blocker: `` `arquivo:Llinha`: <problema> → <impacto>. <fix>.``
 
+Cobertura incompleta também é blocker e usa caminho(s) reais, por exemplo:
+`` `src/a.ts`, `assets/logo.png`: cobertura incompleta; não foi possível ler o
+patch/conteúdo no head do PR → o diff novo não foi totalmente revisado. Disponibilize
+os arquivos/conector e repita a revisão.`` Nunca aprove um PR com esse blocker.
+
 Warning: `` `arquivo:Llinha`: <problema>. <fix>.``
 
 Praise: só um ponto positivo comprovável do diff; não invente. Nits nunca são

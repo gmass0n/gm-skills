@@ -22,13 +22,13 @@ Convert a ready `docs/specs/<feature>/spec.md` into the implementation contract 
 
 ## Write executable tasks
 
-1. Use [the plan template](templates/plan.template.md). Give every task a stable ID, repository, dependencies, mapped REQs, exact files/patterns, and TDD steps sufficient for a fresh executor.
-2. Keep implementation order separate from dependency order. Pre-compute batches only where no task shares requirements, files, contracts, or repository state.
+1. Start `plan.md` as `draft` from [the plan template](templates/plan.template.md). Give every task a stable ID, repository, dependencies, mapped REQs, exact files/patterns, and TDD steps sufficient for a fresh executor.
+2. Keep implementation order separate from dependency order. For multi-repo work, make `L-0` explicit: one executable `T-0-<repo>` per registry repo that validates clone, base, worktree, and branch; includes Steps and Verification; and is a prerequisite of `L-1`. Pre-compute later batches only where no task shares requirements, files, contracts, or repository state.
 3. Include a complete REQ → task → test coverage matrix. A REQ without a discriminating verification path is uncovered; resolve it before finishing.
-4. Run the plan's consistency analysis: validate every REQ is covered, every task has a test and gate, all dependencies are acyclic, cross-repo contracts agree, and no map invariant is contradicted.
+4. Run the plan's consistency analysis. Persist every `[ANALYSIS: ...]` finding in `Pending analysis`, keep `status: draft`, correct the plan, and rerun until the section is `None.`: validate every REQ is covered, every task has a test and gate, all dependencies are acyclic, cross-repo contracts agree, and no map invariant is contradicted.
 
 ## Hand off
 
-Write `plan.md` only after the analysis is clean. Report the task graph, batches, coverage matrix, unresolved external facts, and exact repo/worktree implications. Then tell the user to invoke `$sdd:implement <feature>` manually.
+Set `status: ready` only after the analysis is clean. Report the task graph, batches, coverage matrix, unresolved external facts, and exact repo/worktree implications. Then tell the user to invoke `$sdd:implement <feature>` manually.
 
-Do not code, silently remediate unrelated concerns, or manufacture requirements beyond the ready spec.
+Do not code, manufacture requirements beyond the ready spec, or add debt/remediation unless it references an already-declared task (or is a full task), its `file:line` anchor is inside that task's `Files` list, and it records `Accepted by: <user decision/date or decision ID>`.

@@ -15,7 +15,9 @@ Code review de um Pull Request do **GitHub**.
 
 ## Passos
 
-1. **Busque o diff do PR** via `mcp__github__pull_request_read` com `method: "get_diff"` (unified diff). Se truncar (PR grande), use `method: "get_files"` e revise arquivo a arquivo pelo campo `patch`. Ferramentas deferidas → carregue com ToolSearch `select:mcp__github__pull_request_read` antes.
+1. **Prove a cobertura antes das lentes.** Paginate `mcp__github__pull_request_read(method: "get_files")` com `page`/`perPage` até não haver próxima página e crie o inventário de todos os arquivos alterados (caminho + status). Faça isso mesmo se o unified diff parecer completo. Busque também `get_diff`, mas reconcilie-o com o inventário. Para cada arquivo, leia o `patch`; quando ele estiver ausente, truncado ou for binário, busque o conteúdo no head do PR com `mcp__github__get_file_contents` e revise a alteração no contexto disponível. Ferramentas deferidas → carregue com ToolSearch antes. Só marque um arquivo como lido após essa etapa.
+
+   Se alguma página, patch ou conteúdo necessário não puder ser lido, registre os caminhos e retorne um **blocker de cobertura incompleta**; não aprove o PR, inclusive em revisão inline. Não use ausência de achados como substituto de cobertura.
 
 2. **Carregue a doutrina de review da `sdd:review`** (uma leitura por arquivo) e siga-a — não invente o motor:
    - `<sdd-review>/references/review-lenses.md` — as 5 lentes + as blocklists "What NOT to flag".
@@ -31,7 +33,7 @@ Code review de um Pull Request do **GitHub**.
 ## Notas específicas de GitHub
 
 - **Numeração de linhas no diff:** use sempre o número da linha do arquivo **após** o patch (lado `+`). Se o achado for sobre linha removida, cite a linha do contexto adjacente preservada no diff.
-- **PRs grandes:** a API do GitHub trunca o diff em ~3000 linhas / arquivos muito grandes. Se detectar truncamento, pegue arquivo-a-arquivo via `mcp__github__pull_request_read` com `method: "get_files"` (paginado, parâmetros `page`/`perPage`) e revise por arquivo. Nunca dê parecer sem ter visto o conteúdo dos arquivos modificados.
+- **PRs grandes:** o unified diff pode truncar. O inventário paginado de `get_files` é obrigatório em qualquer tamanho; nunca dê parecer sem conciliar todas as páginas com arquivos lidos. Patch ausente/truncado/binário exige conteúdo do head; conteúdo inacessível é blocker de cobertura, não aprovação parcial.
 - **PRs de merge / squash em rebase:** revise o diff do PR (head vs base), não os commits individuais — exceto quando o usuário pedir review por commit.
 
 ## Regras de análise

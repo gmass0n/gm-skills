@@ -4,8 +4,10 @@ lang: pt|en
 created: <YYYY-MM-DD>
 repos:
   - name: <repo>
+    main_checkout: <absolute-main-checkout>
     worktree: <path>
     branch: <branch>
+    expected_head: <commit-or-ref>
     port: <chosen-free-port>
 ---
 
@@ -65,6 +67,7 @@ Executable, step by step. Run in the worktree, never the main checkout.
 ## Data strategy
 
 - **Source:** mock | real dev
+- If real: before mutation, prove the non-production target and account: `<command/check>` → expected `<host/profile/account evidence>`; otherwise block the scenario.
 - If real: seed own data with unique prefix `<prefix>-` (e.g. `POST /orders`), so it can't collide.
 - **Cleanup:** delete everything under prefix `<prefix>-` at the end.
 

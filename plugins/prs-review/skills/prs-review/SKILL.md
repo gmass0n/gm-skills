@@ -30,6 +30,12 @@ PR. Carregue uma deferred tool via ToolSearch quando necessário.
 - GitHub: `mcp__github__pull_request_read` e, para arquivos no branch,
   `mcp__github__get_file_contents`.
 
+Além desses mínimos, descubra na plataforma a operação que lista os arquivos
+alterados (e a de conteúdo do arquivo no head do PR, se ela for separada). Não
+comece a análise sem conseguir paginar essa lista até o fim. Se o conector não
+expuser a operação necessária, a revisão daquele PR fica incompleta e rejeitada
+— nunca presuma que o diff recebido representa todos os arquivos.
+
 Se algum MCP necessário estiver ausente, encerre sem revisão parcial usando
 exatamente uma das respostas abaixo:
 
@@ -48,9 +54,16 @@ exatamente uma das respostas abaixo:
 2. Revise todos os PRs em paralelo, um subagente por PR, quando houver suporte.
    Se não houver subagentes, revise inline e sequencialmente; isso não é motivo
    para cancelar o lote.
-3. Busque o diff pelo MCP: Bitbucket `getPullRequestDiff`; GitHub
-   `pull_request_read(method: "get_diff")`. Quando o diff GitHub truncar,
-   pagine com `get_files` e seus campos `patch`.
+3. Primeiro construa o inventário completo: pagine a lista de arquivos
+   alterados até não haver próxima página e registre cada caminho/status. Faça
+   isso também na revisão inline; delegar não transfere a prova de cobertura.
+   Depois busque o diff pelo MCP: Bitbucket `getPullRequestDiff`; GitHub
+   `pull_request_read(method: "get_diff")` e `get_files` paginado. Reconcilie
+   diff, páginas e inventário: cada arquivo alterado precisa estar marcado como
+   lido. Para patch ausente, truncado ou binário, busque o conteúdo do arquivo
+   no head do PR e revise-o no escopo da mudança; se não puder obter ou ler esse
+   conteúdo, marque a cobertura como incompleta. Não aprove PR/lote com qualquer
+   arquivo não lido: inclua um blocker explícito de cobertura incompleta.
 4. Aplique a doutrina da `sdd:review`: lentes cegas, depois verificação
    adversarial. Procure, nos caches Claude e Codex,
    `~/.claude/plugins/cache/gm-skills/sdd/*/skills/review/` e
@@ -67,8 +80,8 @@ exatamente uma das respostas abaixo:
    Itens refutados e questions não entram no veredito; partial vira warning.
 6. Retorne somente blockers, warnings e praise concretos, com
    `arquivo:Llinha`. Descarte nits.
-7. Consolide: qualquer blocker rejeita o lote e o PR correspondente; sem blocker
-   aprova ambos. Grave o resultado em
+7. Consolide: qualquer blocker — inclusive cobertura incompleta — rejeita o
+   lote e o PR correspondente; sem blocker aprova ambos. Grave o resultado em
    `code-review-<TASK-KEY-ou-AAAA-MM-DD>.txt` no diretório atual.
 
 Leia [o contrato de saída](references/output-contract.md) antes de gravar o

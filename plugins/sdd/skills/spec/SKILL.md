@@ -17,7 +17,7 @@ Create and incrementally maintain `docs/specs/<feature>/spec.md`: an English, te
 ## Clarification loop
 
 1. Ask one question at a time through the native question UI, with a grounded recommended option first. Exhaust relevant happy paths, errors, limits, legacy data, states, timing, and explicit out-of-scope boundaries.
-2. Persist every unresolved ambiguity immediately as `[NEEDS CLARIFICATION: ...]`; silence is not a decision. When new information invalidates a decision, recompute every dependent decision and requirement with a supersession trace.
+2. Persist every unresolved ambiguity immediately as `[NEEDS CLARIFICATION: ...]`; silence is not a decision. Before persisting a consequential delegated decision, reconcile it with the decision log: preserve an agreeing entry, record a supersession trace for a changed one, or stop for the user when the conflict is unresolved. Record its source and `file:line`/official-doc evidence with the affected REQs.
 3. Express requirements as observable EARS statements with stable REQ-IDs and measurable acceptance criteria. If an external route, field, or event is not confirmed from its official documentation, mark it `[UNVERIFIED]`.
 4. For multi-repo work, use the topology table and tag each REQ with exactly one repository. Split cross-repo behavior into one REQ per responsible repository.
 5. Include a state, sequence, or flow diagram whenever it exposes nontrivial lifecycle, interaction, or time-window behavior; skip it for trivial linear work.
@@ -26,6 +26,6 @@ Use [the specification template](templates/spec.template.md) for the required st
 
 ## Finish and hand off
 
-Before marking ready, verify every REQ has acceptance criteria, every decision is recorded, external uncertainty is explicit, and—when applicable—the repository table, chain, and REQ tags are complete. Write no design, class names, or file layouts, and do not change source code.
+Before marking ready, verify every REQ has acceptance criteria, every consequential decision has reconciled evidence and affected REQs, external uncertainty is explicit, and—when applicable—the repository table, chain, and REQ tags are complete. Write no design, class names, or file layouts, and do not change source code.
 
 Report the ready specification path and tell the user to invoke `$sdd:plan <feature>` manually. The plan inherits the recorded topology and requirement mapping; it does not rediscover them.
