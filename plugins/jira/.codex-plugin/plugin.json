@@ -1,7 +1,7 @@
 {
   "name": "jira",
   "version": "0.1.0",
-  "description": "Jira discovery and triage workflows: publish an evidence-backed brief for one task or triage a bounded board into reviewed Bitbucket pull requests.",
+  "description": "Jira discovery and triage workflows: interview and publish an evidence-backed brief for one task or triage a bounded board into reviewed Bitbucket pull requests.",
   "author": {
     "name": "Gabriel Masson"
   },
@@ -11,11 +11,11 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Jira",
-    "shortDescription": "Discover or triage Jira work.",
-    "longDescription": "Investigates one Jira task and publishes an implementation brief, or triages a bounded board into reviewed Bitbucket pull requests.",
+    "shortDescription": "Interview, discover, or triage Jira work.",
+    "longDescription": "Interviews the user, investigates one Jira task, and publishes an implementation brief, or triages a bounded board into reviewed Bitbucket pull requests.",
     "developerName": "Gabriel Masson",
     "category": "Productivity",
     "capabilities": [],
-    "defaultPrompt": "Use $jira:discovery to investigate this Jira task and publish its implementation brief."
+    "defaultPrompt": "Use $jira:discovery to interview me, investigate this Jira task, and publish its implementation brief."
   }
 }

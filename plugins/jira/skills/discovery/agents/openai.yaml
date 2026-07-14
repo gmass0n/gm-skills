@@ -1,4 +1,4 @@
 interface:
   display_name: "Jira Discovery"
-  short_description: "Publish an evidence-backed Jira brief."
-  default_prompt: "Use $jira:discovery to investigate this Jira task and publish its implementation brief."
+  short_description: "Interview, discover, and publish a Jira brief."
+  default_prompt: "Use $jira:discovery to interview me, investigate this Jira task, and publish its implementation brief."

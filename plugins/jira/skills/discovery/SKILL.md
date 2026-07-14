@@ -1,6 +1,6 @@
 ---
 name: discovery
-description: Discover one Jira task or story and publish an evidence-backed implementation brief.
+description: Interview, discover, and publish an evidence-backed Jira implementation brief.
 disable-model-invocation: true
 ---
 
@@ -10,6 +10,21 @@ Run `$jira:discovery <JIRA-KEY | problem brief> [repo paths or names]` to turn
 one problem into a small, evidence-backed Jira artifact. Publish it directly
 to Jira when the MCP can write; use a local `.txt` only after the user accepts
 that fallback.
+
+## Interview
+
+Start a `/grilling` session before reading Jira or publishing an artifact.
+`/grill-me` is only an alias for the same protocol; use `/grilling` as the
+single interview entrypoint.
+
+Ask one question at a time and wait for its answer. Investigate facts in the
+named codebases instead of asking about them; ask the user to decide intent,
+scope, constraints, tradeoffs, and acceptance. Cover every unresolved decision
+that changes the proposed issue.
+
+Do not collect Jira data, write a local artifact, or create/update an issue
+until the user confirms shared understanding of the problem and intended
+outcome.
 
 ## Gate
 
@@ -30,7 +45,7 @@ mode, do not call a Jira write operation.
 
 ## Discovery
 
-1. Normalize the input. A Jira key identifies one existing issue; otherwise,
+1. Normalize the input after the interview. A Jira key identifies one existing issue; otherwise,
    the supplied brief is the source request. Ask one question only when neither
    identifies a concrete problem or impacted system.
 

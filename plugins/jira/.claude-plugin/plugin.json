@@ -1,6 +1,6 @@
 {
   "name": "jira",
-  "description": "Jira discovery and bounded board triage. Use $jira:discovery to publish an evidence-backed implementation brief when Jira MCP writes are available, or accept a local fallback; use $jira:triage for the approval-gated Bitbucket workflow.",
+  "description": "Jira discovery and bounded board triage. Use $jira:discovery to interview the user, then publish an evidence-backed implementation brief when Jira MCP writes are available, or accept a local fallback; use $jira:triage for the approval-gated Bitbucket workflow.",
   "version": "0.1.0",
   "author": {
     "name": "Gabriel Masson"
