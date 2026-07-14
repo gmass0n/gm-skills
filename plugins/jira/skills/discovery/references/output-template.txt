@@ -1,0 +1,38 @@
+Title: [TYPE] Short, outcome-oriented title
+
+Description
+
+**Type**
+- Bug | Story | Task
+
+**Context**
+- What happens today, who is affected, and the verified cause or limitation.
+
+**Objective**
+- The intended user or product outcome.
+
+**Scope**
+- Product/system: responsibility and required change.
+- Technical repository/component (when known): responsibility and required change.
+
+**Acceptance criteria**
+1. Observable expected behavior.
+2. Observable expected behavior.
+
+**Definition of Done**
+- Contract, behavior, and focused validation completed.
+
+**Out of scope**
+- Explicitly excluded follow-up work.
+
+**Suggestions**
+- Optional implementation direction, clearly separated from requirements.
+
+**Risks / open questions**
+- Unknowns that need a decision before implementation.
+
+**Affected repositories**
+- Repository/component (when known): role in the flow.
+
+**Evidence**
+- Jira context, interview decision, or `path:line` — short relevance note.

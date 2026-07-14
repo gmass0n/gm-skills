@@ -65,10 +65,10 @@
       "category": "Productivity"
     },
     {
-      "name": "triage",
+      "name": "prs-review",
       "source": {
         "source": "local",
-        "path": "./plugins/triage"
+        "path": "./plugins/prs-review"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -77,10 +77,10 @@
       "category": "Productivity"
     },
     {
-      "name": "prs-review",
+      "name": "jira",
       "source": {
         "source": "local",
-        "path": "./plugins/prs-review"
+        "path": "./plugins/jira"
       },
       "policy": {
         "installation": "AVAILABLE",

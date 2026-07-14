@@ -29,11 +29,6 @@
       "description": "User-invoked GitHub and Bitbucket release preparation and finalization."
     },
     {
-      "name": "triage",
-      "source": "./plugins/triage",
-      "description": "User-invoked Jira triage with approval checkpoints."
-    },
-    {
       "name": "prs-review",
       "source": "./plugins/prs-review",
       "description": "User-invoked multi-platform pull-request review."
@@ -42,6 +37,11 @@
       "name": "gm-skills",
       "source": "./plugins/gm-skills",
       "description": "Manual router for the gm-skills commands."
+    },
+    {
+      "name": "jira",
+      "source": "./plugins/jira",
+      "description": "User-invoked Jira discovery and bounded board triage."
     }
   ]
 }

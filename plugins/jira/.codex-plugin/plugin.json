@@ -1,0 +1,21 @@
+{
+  "name": "jira",
+  "version": "0.1.0",
+  "description": "Jira discovery and triage workflows: interview and publish an evidence-backed brief for one task, with optional technical repository discovery, or triage a bounded board into reviewed Bitbucket pull requests.",
+  "author": {
+    "name": "Gabriel Masson"
+  },
+  "repository": "https://github.com/gmass0n/gm-skills",
+  "license": "MIT",
+  "keywords": ["jira", "discovery", "triage", "requirements", "mcp"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Jira",
+    "shortDescription": "Interview, discover, or triage Jira work.",
+    "longDescription": "Interviews the user, optionally investigates repositories, and publishes one Jira brief, or triages a bounded board into reviewed Bitbucket pull requests.",
+    "developerName": "Gabriel Masson",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "Use $jira:discovery to interview me, investigate this Jira task, and publish its implementation brief."
+  }
+}

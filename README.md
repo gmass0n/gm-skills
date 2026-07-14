@@ -11,7 +11,8 @@ Start with `$gm-skills:help` when you need to choose a workflow. It maps one obj
 | Map repository conventions | `$sdd:codebase` |
 | Specify, plan, implement, debug, or locally review | `$sdd:spec`, `$sdd:plan`, `$sdd:implement`, `$sdd:debug`, `$sdd:review` |
 | Plan or execute end-to-end QA | `$qa:plan`, `$qa:test` |
-| Triage Jira work | `$triage:jira` |
+| Explore one Jira task before implementation | `$jira:discovery` |
+| Triage a bounded Jira board | `$jira:triage` |
 | Review remote pull requests | `$prs-review:prs-review` |
 | Prepare or finalize a GitHub release | `$release:github` |
 | Prepare or finalize a Bitbucket release | `$release:bitbucket` |
@@ -29,7 +30,7 @@ Each skill keeps its own prerequisites, artifacts, guardrails, and completion ch
 /plugin install sdd@gm-skills
 /plugin install qa@gm-skills
 /plugin install status-report@gm-skills
-/plugin install triage@gm-skills
+/plugin install jira@gm-skills
 /plugin install prs-review@gm-skills
 /plugin install release@gm-skills
 ```
@@ -53,7 +54,7 @@ gm-skills/
     ├── sdd/             # codebase, spec, plan, implement, review, debug
     ├── qa/              # plan, test
     ├── status-report/
-    ├── triage/
+    ├── jira/            # discovery and bounded board triage
     ├── prs-review/
     └── release/          # GitHub and Bitbucket
 ```

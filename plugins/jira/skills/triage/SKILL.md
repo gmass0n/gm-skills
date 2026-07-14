@@ -1,12 +1,12 @@
 ---
-name: jira
+name: triage
 description: Triage small Jira tickets into reviewed Bitbucket pull requests.
 disable-model-invocation: true
 ---
 
 # Jira Triage
 
-Run `$triage:jira <boards> [--status=<status>]` as a bounded Jira-to-Bitbucket pipeline. Default status is `Priorizado`. If boards are absent and not configured, ask once. Open at most three draft WIP PRs, stop for explicit human approval, and deliver only the approved tickets.
+Run `$jira:triage <boards> [--status=<status>]` as a bounded Jira-to-Bitbucket pipeline. Default status is `Priorizado`. If boards are absent and not configured, ask once. Open at most three draft WIP PRs, stop for explicit human approval, and deliver only the approved tickets.
 
 ## Guardrails
 
