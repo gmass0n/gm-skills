@@ -1,7 +1,7 @@
 {
   "name": "jira",
-  "version": "0.1.0",
-  "description": "Jira discovery and triage workflows: interview and publish an evidence-backed brief for one task, with optional technical repository discovery, or triage a bounded board into reviewed Bitbucket pull requests.",
+  "version": "0.1.1",
+  "description": "Jira discovery and triage workflows: interview and publish an evidence-backed, value-oriented backlog item with optional technical repository discovery, or triage a bounded board into reviewed Bitbucket pull requests.",
   "author": {
     "name": "Gabriel Masson"
   },

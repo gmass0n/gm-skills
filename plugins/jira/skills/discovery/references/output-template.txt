@@ -1,32 +1,39 @@
-Title: [TYPE] Short, outcome-oriented title
+Title: Short, outcome-oriented title
 
 Description
 
 **Type**
 - Bug | Story | Task
 
-**Context**
-- What happens today, who is affected, and the verified cause or limitation.
+**Problem / opportunity**
+- What happens today, who is affected, and why this matters now.
+- For a Bug: current behavior, expected behavior, and verified impact.
 
-**Objective**
-- The intended user or product outcome.
+**User story** _(Story only)_
+- As a <role>, I want <outcome>, so that <benefit>.
+
+**Outcome and value**
+- Intended future state and the user, operational, or business value.
 
 **Scope**
-- Product/system: responsibility and required change.
-- Technical repository/component (when known): responsibility and required change.
+- Included user journeys, business rules, and affected product surfaces.
+- Use repository/component names only to clarify ownership, never as a solution plan.
 
 **Acceptance criteria**
 1. Observable expected behavior.
 2. Observable expected behavior.
 
-**Definition of Done**
-- Contract, behavior, and focused validation completed.
+**Delivery constraints** _(only when confirmed)_
+- Non-negotiable compatibility, security, permission, performance, or platform constraints.
 
 **Out of scope**
 - Explicitly excluded follow-up work.
 
-**Suggestions**
-- Optional implementation direction, clearly separated from requirements.
+**Suggested delivery decomposition** _(optional; do not create subtasks unless requested)_
+1. Subtask title — owner boundary, one deliverable, and verification signal.
+
+**Implementation considerations** _(optional)_
+- Non-binding technical direction, clearly separated from requirements.
 
 **Risks / open questions**
 - Unknowns that need a decision before implementation.
