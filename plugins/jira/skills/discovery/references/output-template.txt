@@ -2,9 +2,6 @@ Title: Short, outcome-oriented title
 
 Description
 
-**Type**
-- Bug | Story | Task
-
 **Problem / opportunity**
 - What happens today, who is affected, and why this matters now.
 - For a Bug: current behavior, expected behavior, and verified impact.
