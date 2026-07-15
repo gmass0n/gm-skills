@@ -41,6 +41,31 @@ only for missing material decisions:
   (`Task`, `Bug`, or `Story`) if it cannot be inferred from the request.
 - **Scope:** included systems, repositories, constraints, and acceptance.
 
+### Backlog standard
+
+Choose the work-item type from the value being managed; do not preserve a
+user's label when the board reveals a materially better fit:
+
+- **Story:** one user or stakeholder can describe a goal and benefit. Write
+  `As a <role>, I want <outcome>, so that <benefit>.`
+- **Task / Technical:** operational, enabling, migration, or maintenance work
+  with no direct user-facing goal. State the outcome and delivery boundary.
+- **Bug:** a verified deviation from expected behavior; state current behavior,
+  expected behavior, impact, and reproduction when known.
+- **Epic:** an outcome that requires multiple independently valuable stories.
+  Propose it instead of forcing a large cross-system initiative into one story.
+
+For every type, lead with the problem, audience, desired outcome, and value.
+Acceptance criteria describe observable, testable behavior — not endpoints,
+libraries, classes, or a step-by-step implementation. Put confirmed technical
+constraints under **Delivery constraints** and optional architecture under
+**Implementation considerations**. Label suggestions and inferences clearly.
+
+Subtasks are a delivery decomposition, not a substitute for scope. Suggest
+them only after the parent outcome is clear; create them only when the user
+explicitly asks. Each subtask needs one owner boundary, one deliverable, and
+one verification signal.
+
 Treat an existing brief, branch, report, or local artifact as user-provided
 context, not as permission to skip the interview. Complete only when the user
 confirms the intended operation and outcome.
@@ -80,7 +105,9 @@ check when available; do not turn the record into new implementation work.
 Assemble the title and description with [the output template](references/output-template.txt).
 Write user-facing text in the language of the request; keep code, URLs,
 commands, Jira keys, and `path:line` references literal. Use numbered
-acceptance criteria and bullets for other lists.
+acceptance criteria and bullets for other lists. Apply the Backlog standard:
+the draft must make the **why**, **who**, **what outcome**, **scope**, and
+**success criteria** scannable before technical detail.
 
 Present a concise draft summary: operation, project, issue type, required
 board fields, title, and any unresolved risk. Ask for one final confirmation.
