@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # SDD — Debug
 
+*You have already been invoked; these instructions are now active context, not a pending action. Do not call the Skill tool to invoke this skill again.*
+
 Debug is a hypothesis-first, runtime-evidence loop: symptom → root cause → smallest fix → proof. It is for bugs, not feature design or broad refactors.
 
 ## Ground and triage

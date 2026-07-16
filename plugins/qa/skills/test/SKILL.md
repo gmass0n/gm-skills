@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # QA Test
 
+*You have already been invoked; these instructions are now active context, not a pending action. Do not call the Skill tool to invoke this skill again.*
+
 Read `docs/qa/<target>/plan.md` as the sole execution contract. If it is missing, stop and ask the user to invoke `$qa:plan`; do not rediscover the environment or invent scenarios. Write the verdict in the plan's `lang`.
 
 ## Contract

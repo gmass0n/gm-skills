@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # SDD — Codebase map
 
+*You have already been invoked; these instructions are now active context, not a pending action. Do not call the Skill tool to invoke this skill again.*
+
 Create the canonical, evidence-based map under `docs/codebase/`. The map lets a later human-invoked `$sdd:spec` or `$sdd:plan` load one relevant document instead of rediscovering the repository.
 
 ## Preconditions

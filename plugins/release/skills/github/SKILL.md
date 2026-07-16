@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # GitHub Release
 
+*You have already been invoked; these instructions are now active context, not a pending action. Do not call the Skill tool to invoke this skill again.*
+
 Prepare or finalize a release for a single repository. Prove every claim from
 that repository's history and diff. `CHANGELOG.md` is technical; release notes
 are user-friendly and always separate.

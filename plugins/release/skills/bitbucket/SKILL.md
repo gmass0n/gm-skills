@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # Bitbucket Release
 
+*You have already been invoked; these instructions are now active context, not a pending action. Do not call the Skill tool to invoke this skill again.*
+
 Run a release for a single Bitbucket repository in PREPARE or FINALIZE.
 A release is represented by a commit, tag, PR, and report; do not invent a
 platform release object. Apply the shared contract in

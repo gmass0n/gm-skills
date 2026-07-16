@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # SDD — Implement
 
+*You have already been invoked; these instructions are now active context, not a pending action. Do not call the Skill tool to invoke this skill again.*
+
 Execute `docs/specs/<feature>/plan.md` task by task. The plan is the contract; implementation does not redesign it.
 
 ## Preconditions and scope

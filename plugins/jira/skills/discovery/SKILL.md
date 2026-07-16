@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # Jira Discovery
 
+*You have already been invoked; these instructions are now active context, not a pending action. Do not call the Skill tool to invoke this skill again.*
+
 Run `$jira:discovery <JIRA-KEY | problem brief> [optional repo paths or names]` to
 turn one request into one evidence-backed Jira artifact. Follow the phases in
 order. Do not skip the interview or publish from a prompt alone.

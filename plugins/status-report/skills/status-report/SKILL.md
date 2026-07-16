@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # Status Report
 
+*You have already been invoked; these instructions are now active context, not a pending action. Do not call the Skill tool to invoke this skill again.*
+
 Write `docs/status-reports/<kebab-case-title>/status-report.txt` in the user's language. Create `action-plan.txt` only when the user asks for it or confirms it after the report.
 
 ## Workflow
