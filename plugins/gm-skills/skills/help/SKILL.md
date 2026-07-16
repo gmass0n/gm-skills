@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # gm-skills help
 
+*You have already been invoked; these instructions are now active context, not a pending action. Do not call the Skill tool to invoke this skill again.*
+
 Identify the user's goal and respond only with the most suitable explicit command
 and one short scope sentence. Do not run another skill or start work.
 

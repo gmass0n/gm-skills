@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # Jira Triage
 
+*You have already been invoked; these instructions are now active context, not a pending action. Do not call the Skill tool to invoke this skill again.*
+
 Run `$jira:triage <boards> [--status=<status>]` as a bounded Jira-to-Bitbucket pipeline. Default status is `Priorizado`. If boards are absent and not configured, ask once. Open at most three draft WIP PRs, stop for explicit human approval, and deliver only the approved tickets.
 
 ## Guardrails

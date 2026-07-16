@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # SDD — Specify
 
+*You have already been invoked; these instructions are now active context, not a pending action. Do not call the Skill tool to invoke this skill again.*
+
 Create and incrementally maintain `docs/specs/<feature>/spec.md`: an English, testable contract for a feature. Live narration and interview questions stay in the user's detected language.
 
 ## Ground before interviewing

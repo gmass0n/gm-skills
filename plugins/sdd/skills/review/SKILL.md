@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # SDD — Review
 
+*You have already been invoked; these instructions are now active context, not a pending action. Do not call the Skill tool to invoke this skill again.*
+
 Review local code only and write one verdict at `docs/reviews/<slug>/review.md`. Route remote PR URLs to `$prs-review`; this skill never fixes code or changes a remote.
 
 ## Ground and resolve

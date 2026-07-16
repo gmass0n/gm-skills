@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # QA Plan
 
+*You have already been invoked; these instructions are now active context, not a pending action. Do not call the Skill tool to invoke this skill again.*
+
 Create `docs/qa/<target>/plan.md`: the complete execution contract for a later, explicit `$qa:test` invocation. Write the interview, narration, and plan in the user's language; set `lang: pt|en` in its frontmatter. Only write below `docs/qa/<target>/`; do not run tests or fix code.
 
 ## Contract

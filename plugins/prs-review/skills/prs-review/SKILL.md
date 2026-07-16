@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # PRs Review
 
+*You have already been invoked; these instructions are now active context, not a pending action. Do not call the Skill tool to invoke this skill again.*
+
 Review a related batch of PRs from Bitbucket, GitHub, or both and deliver one
 ClickUp-ready verdict. The scope is each PR's new diff; do not invent contracts,
 rules, or context across repositories.
