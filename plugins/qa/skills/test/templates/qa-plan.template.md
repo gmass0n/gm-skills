@@ -34,6 +34,11 @@ Executable, step by step. Run in the worktree, never the main checkout.
    - start: `<start command>` (background) on port `<port>`
    - confirm boot: `<curl / log line that proves it's up>`
 3. Repeat per repo; ensure inter-service URLs point at the chosen local ports.
+4. **Mobile app** (if under test, React Native via Maestro):
+   - device/simulator: `<identifier>` — boot: `<command>` (e.g. `emulator -avd <name>` / `xcrun simctl boot <udid>`)
+   - Metro: `<start command>` (background); build+install: `<variant build command>`
+   - backend reach: `<how the app hits the API — 10.0.2.2 alias / tunnel / LAN IP>`
+   - confirm launch: `<app opens to expected screen / adb log line>`
 
 ## Credentials & mode per scenario
 
@@ -64,6 +69,11 @@ Executable, step by step. Run in the worktree, never the main checkout.
   - Expected: <status/body/headers>
   - Evidence: request/response + headers
 
+- **[S3] <title>** — type: `mobile` · **sequential** · credential: unattended
+  - Steps: <ordered Maestro flow — tap/input/assert on the booted device>
+  - Expected: <expected screen/state>
+  - Evidence: screenshot + Metro/device log lines
+
 ## Data strategy
 
 - **Source:** mock | real dev
@@ -73,7 +83,7 @@ Executable, step by step. Run in the worktree, never the main checkout.
 
 ## Execution rules (inherited)
 
-- Frontend sequential (browser is a singleton); backend may parallelize when independent.
-- Fresh clean browser profile at start; close at end.
+- Frontend and mobile sequential (browser and Maestro device are each a singleton); backend may parallelize when independent.
+- Fresh clean browser profile at start; close at end. For mobile, reset the app (reinstall or clear data) at start.
 - Stop and ask the human if anything stalls — never guess a path/port/credential.
 - qa:test only tests and reports — it never fixes code.
