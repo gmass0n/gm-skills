@@ -79,14 +79,20 @@ After the interview, inspect the target board before technical investigation.
 1. For an update, fetch the exact issue and record its title, description,
    type, status, linked work, and fields that change scope.
 2. For a new issue, fetch the target project metadata: available issue types,
-   required fields, defaults, and any board-specific constraints. Inspect a
-   small number of recent comparable issues only when it helps explain a
-   required field or convention.
+   required fields, defaults, and any board-specific constraints. Scope every
+   metadata query to the known project key — an unscoped project listing can
+   exceed the tool result limit. Inspect a small number of recent comparable
+   issues only when it helps explain a required field or convention.
 3. Validate only the operation that will occur: `create` for a new issue or
    `update` for the supplied issue. Do not require update permission to create,
    nor create permission to edit.
 4. If a required field has no user-confirmed value, ask one question. Never
    invent a product, component, sprint, parent, assignee, priority, or status.
+5. A workflow validator can require a field that the create metadata omits —
+   it only surfaces as a create-time rejection naming the field. Recover by
+   reading recent issues of the same project and type: when they all carry one
+   value for that field, use it and name the field and value in the draft
+   summary; when they diverge, ask.
 
 If the required operation is unavailable, offer local fallback only for that
 operation, naming it accurately. Do not select fallback because an unrelated
@@ -99,14 +105,18 @@ substantiate the agreed scope. If multiple repositories are relevant, state
 which owns source data, filtering, and presentation. Treat unverified technical
 details as risks/questions, not facts.
 
+When a branch or diff is the evidence, fetch the remote and diff against the
+remote base branch (`origin/<base>`); a stale local base silently narrows the
+scope to a subset of the real change.
+
 For a completed correction, verify the named change and its focused regression
 check when available; do not turn the record into new implementation work.
 
 ## 5. Draft and confirmation
 
 Assemble the title and description with [the output template](references/output-template.txt).
-Write user-facing text in the language of the request; keep code, URLs,
-commands, Jira keys, and `path:line` references literal. Use numbered
+Write user-facing text — the title included — in the language of the request;
+keep code, URLs, commands, Jira keys, and `path:line` references literal. Use numbered
 acceptance criteria and bullets for other lists. Apply the Backlog standard:
 the draft must make the **why**, **who**, **what outcome**, **scope**, and
 **success criteria** scannable before technical detail.
